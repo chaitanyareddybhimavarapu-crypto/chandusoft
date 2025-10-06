@@ -5,12 +5,24 @@ $username = "root";
 $password = ""; // default Laragon has no password
 $dbname = "chandusoft";
 
+// Function to get user IP address
+function getUserIP() {
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+        return $_SERVER['HTTP_CLIENT_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        return $_SERVER['HTTP_X_FORWARDED_FOR'];
+    } else {
+        return $_SERVER['REMOTE_ADDR'];
+    }
+}
+
 // Handle AJAX POST submission (from fetch)
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['name'], $_POST['email'], $_POST['message'])) {
     // Sanitize input
     $name = trim($_POST['name']);
     $email = trim($_POST['email']);
     $message = trim($_POST['message']);
+    $ip = getUserIP();
 
     // Basic validation
     if (
@@ -29,10 +41,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['name'], $_POST['email
             exit;
         }
 
-        // Prepare and bind statement
-        $stmt = $conn->prepare("INSERT INTO leads (name, email, message) VALUES (?, ?, ?)");
+        // Prepare and bind statement with ip included
+        $stmt = $conn->prepare("INSERT INTO leads (name, email, message, ip) VALUES (?, ?, ?, ?)");
         if ($stmt) {
-            $stmt->bind_param("sss", $name, $email, $message);
+            $stmt->bind_param("ssss", $name, $email, $message, $ip);
 
             if ($stmt->execute()) {
                 echo "success";
