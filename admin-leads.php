@@ -1,35 +1,31 @@
 <?php
 session_start();
+require 'db.php';
 
-// Check admin login
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+// Check if user is logged in
+if (!isset($_SESSION['user'])) {
     $_SESSION['flash'] = "Please log in first.";
-    header("Location: admin-login.php");
+    header("Location: login.php");
     exit;
 }
 
-// DB Connection
-$host = 'localhost';
-$dbUser = 'root';
-$dbPass = '';
-$dbName = 'chandusoft';
-
-$conn = new mysqli($host, $dbUser, $dbPass, $dbName);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Search logic
+// Get user info
+$user = $_SESSION['user'];
+$role = $user['role'];
 $searchTerm = '';
 $whereClause = '';
+
+// Search logic
 if (isset($_GET['search']) && !empty(trim($_GET['search']))) {
     $searchTerm = trim($_GET['search']);
-    $safeTerm = $conn->real_escape_string($searchTerm);
-    $whereClause = "WHERE name LIKE '%$safeTerm%' OR email LIKE '%$safeTerm%'";
+    $safeTerm = $pdo->quote('%' . $searchTerm . '%');
+    $whereClause = "WHERE name LIKE $safeTerm OR email LIKE $safeTerm";
 }
 
+// Prepare SQL query
 $sql = "SELECT name, email, message, created_at, ip FROM leads $whereClause ORDER BY id DESC";
-$result = $conn->query($sql);
+$stmt = $pdo->query($sql);
+$leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -124,9 +120,9 @@ $result = $conn->query($sql);
 <div class="navbar">
     <div class="logo">Chandusoft Admin</div>
     <div class="menu">
-        <span class="welcome">Welcome Editor!</span>
+        <span class="welcome">Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
         <a href="dashboard.php">Dashboard</a>
-        <a href="adminleads.php">Leads</a>
+        <a href="admin-leads.php">Leads</a>
         <a href="pages.php">Pages</a>
         <a href="logout.php">Logout</a>
     </div>
@@ -151,16 +147,16 @@ $result = $conn->query($sql);
             </tr>
         </thead>
         <tbody>
-            <?php if ($result && $result->num_rows > 0): ?>
-                <?php while ($row = $result->fetch_assoc()): ?>
+            <?php if (!empty($leads)): ?>
+                <?php foreach ($leads as $lead): ?>
                     <tr>
-                        <td><?= htmlspecialchars($row['name']) ?></td>
-                        <td><?= htmlspecialchars($row['email']) ?></td>
-                        <td><?= htmlspecialchars($row['message']) ?></td>
-                        <td><?= htmlspecialchars($row['created_at']) ?></td>
-                        <td><?= htmlspecialchars($row['ip'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($lead['name']) ?></td>
+                        <td><?= htmlspecialchars($lead['email']) ?></td>
+                        <td><?= htmlspecialchars($lead['message']) ?></td>
+                        <td><?= htmlspecialchars($lead['created_at']) ?></td>
+                        <td><?= htmlspecialchars($lead['ip'] ?? '') ?></td>
                     </tr>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             <?php else: ?>
                 <tr><td colspan="5">No leads found.</td></tr>
             <?php endif; ?>

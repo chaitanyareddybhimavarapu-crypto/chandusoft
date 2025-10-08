@@ -5,6 +5,12 @@ $username = "root";
 $password = ""; // default Laragon has no password
 $dbname = "chandusoft";
 
+// Load Composer's autoloader
+require 'vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
 // Function to get user IP address
 function getUserIP() {
     if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
@@ -37,8 +43,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['name'], $_POST['email
 
         // Check connection
         if ($conn->connect_error) {
-            echo "error";
-            exit;
+            die("Connection failed: " . $conn->connect_error);
         }
 
         // Prepare and bind statement with ip included
@@ -47,12 +52,47 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['name'], $_POST['email
             $stmt->bind_param("ssss", $name, $email, $message, $ip);
 
             if ($stmt->execute()) {
-                echo "success";
+                // Send email after successful DB insert
+                $mail = new PHPMailer(true);
+                try {
+                    // SMTP configuration
+                    $mail->isSMTP();
+                    $mail->Host       = 'smtp.gmail.com';
+                    $mail->SMTPAuth   = true;
+                    $mail->Username   = 'cstltest4@gmail.com'; // Use your Gmail email
+                    $mail->Password   = 'vwrs cubq qpqg wfcg';  // Use your app-specific password
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                    $mail->Port       = 587;
+
+                    // Recipients
+                    $mail->setFrom('cstltest4@gmail.com', 'Chandusoft Contact');
+                    $mail->addAddress('chaitanyareddy.bhimavarapu@chandusoft.com', 'Admin'); // Admin email address
+
+                    // Content
+                    $mail->isHTML(true);
+                    $mail->Subject = 'New Lead Submission';
+                    $mail->Body    = "<h3>New message from website contact form</h3>
+                        <p><strong>Name:</strong> " . htmlspecialchars($name) . "</p>
+                        <p><strong>Email:</strong> " . htmlspecialchars($email) . "</p>
+                        <p><strong>Message:</strong><br>" . nl2br(htmlspecialchars($message)) . "</p>
+                        <p><strong>IP Address:</strong> $ip</p>";
+
+                    if ($mail->send()) {
+                        echo "success";
+                    } else {
+                        echo "error";
+                    }
+
+                } catch (Exception $e) {
+                    // Log mail error to file if sending fails
+                    file_put_contents(__DIR__ . '/storage/logs/mail-fail.log', "[" . date("Y-m-d H:i:s") . "] Mail error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
+                    echo "error";
+                }
+
+                $stmt->close();
             } else {
                 echo "error";
             }
-
-            $stmt->close();
         } else {
             echo "error";
         }
@@ -61,7 +101,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['name'], $_POST['email
     } else {
         echo "error";
     }
-    exit; // Prevent rest of the HTML from being sent
+    exit; // Prevent the rest of the HTML from being sent
 }
 ?>
 
