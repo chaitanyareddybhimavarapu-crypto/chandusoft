@@ -26,6 +26,7 @@ if (!$page) {
 $pageTitle = $page['title'];
 $slug = $page['slug'];
 $status = $page['status'];
+$content_html = $page['content_html'] ?? '';
 $message = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -33,13 +34,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pageTitle = trim($_POST['pageTitle'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
     $status = $_POST['status'] ?? 'Draft';
+    $content_html = $_POST['content_html'] ?? '';
 
     if (empty($pageTitle)) {
         $message = "<div class='alert alert-danger'>Page Title is required.</div>";
     } else {
         // Update in DB
-        $updateStmt = $pdo->prepare("UPDATE pages SET title = ?, slug = ?, status = ?, updated_at = NOW() WHERE id = ?");
-        $updateStmt->execute([$pageTitle, $slug, $status, $pageId]);
+        $updateStmt = $pdo->prepare("UPDATE pages SET title = ?, slug = ?, status = ?, content_html = ?, updated_at = NOW() WHERE id = ?");
+        $updateStmt->execute([$pageTitle, $slug, $status, $content_html, $pageId]);
 
         $message = "<div class='alert alert-success'>✅ Page updated successfully!</div>";
     }
@@ -91,6 +93,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <option value="Draft" <?= $status === 'Draft' ? 'selected' : '' ?>>Draft</option>
                     <option value="Archived" <?= $status === 'Archived' ? 'selected' : '' ?>>Archived</option>
                 </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="content_html" class="form-label">Page Content (HTML)</label>
+                <textarea name="content_html" id="content_html" rows="10" class="form-control" placeholder="Enter HTML content..."><?= htmlspecialchars($content_html) ?></textarea>
             </div>
 
             <button type="submit" class="btn btn-primary">Update Page</button>

@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
     $status = $_POST['status'] ?? 'draft';
+    $content_html = $_POST['content_html'] ?? '';
 
     if ($title === '') {
         $error = '⚠️ Title is required.';
@@ -49,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $updated_at = date('Y-m-d H:i:s');
 
         try {
-            $stmt = $pdo->prepare("INSERT INTO pages (title, slug, status, updated_at) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$title, $slug, $status, $updated_at]);
+            $stmt = $pdo->prepare("INSERT INTO pages (title, slug, status, content_html, updated_at) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$title, $slug, $status, $content_html, $updated_at]);
 
             header("Location: pages.php?created=1");
             exit;
@@ -108,13 +109,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         input[type="text"],
-        select {
+        select,
+        textarea {
             width: 100%;
             padding: 10px;
             font-size: 1rem;
             margin-top: 5px;
             border: 1px solid #ccc;
             border-radius: 4px;
+        }
+
+        textarea {
+            font-family: monospace;
+            resize: vertical;
         }
 
         .btn {
@@ -181,6 +188,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="draft">Draft</option>
             <option value="archived">Archived</option>
         </select>
+
+        <label for="content_html">Page Content (HTML)</label>
+        <textarea name="content_html" id="content_html" rows="10" placeholder="Enter HTML content here..."></textarea>
 
         <button type="submit" class="btn">Create Page</button>
     </form>
