@@ -36,7 +36,8 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
-    $status = $_POST['status'] ?? 'draft';
+    $status = strtolower($_POST['status'] ?? 'draft');
+
     $content_html = $_POST['content_html'] ?? '';
 
     if ($title === '') {
@@ -50,9 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $updated_at = date('Y-m-d H:i:s');
 
         try {
-            $stmt = $pdo->prepare("INSERT INTO pages (title, slug, status, content_html, updated_at) VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$title, $slug, $status, $content_html, $updated_at]);
+          $stmt = $pdo->prepare("INSERT INTO pages (title, slug, status, content_html, updated_at) VALUES (?, ?, ?, ?, ?)");
+$stmt->execute([$title, $slug, $status, $content_html, $updated_at]);
 
+ 
             header("Location: pages.php?created=1");
             exit;
         } catch (PDOException $e) {
@@ -189,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="archived">Archived</option>
         </select>
 
-        <label for="content_html">Page Content (HTML)</label>
+        <label for="content_html">content_html</label>
         <textarea name="content_html" id="content_html" rows="10" placeholder="Enter HTML content here..."></textarea>
 
         <button type="submit" class="btn">Create Page</button>

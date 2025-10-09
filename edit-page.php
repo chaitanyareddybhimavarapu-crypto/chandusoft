@@ -33,15 +33,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Get and sanitize inputs
     $pageTitle = trim($_POST['pageTitle'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
-    $status = $_POST['status'] ?? 'Draft';
+    $status = strtolower($_POST['status'] ?? 'draft');
+
     $content_html = $_POST['content_html'] ?? '';
 
     if (empty($pageTitle)) {
         $message = "<div class='alert alert-danger'>Page Title is required.</div>";
     } else {
         // Update in DB
-        $updateStmt = $pdo->prepare("UPDATE pages SET title = ?, slug = ?, status = ?, content_html = ?, updated_at = NOW() WHERE id = ?");
-        $updateStmt->execute([$pageTitle, $slug, $status, $content_html, $pageId]);
+       $updateStmt = $pdo->prepare(
+    "UPDATE pages SET title = ?, slug = ?, status = ?, content_html = ?, updated_at = NOW() WHERE id = ?"
+);
+$updateStmt->execute([$pageTitle, $slug, $status, $content_html, $pageId]);
 
         $message = "<div class='alert alert-success'>✅ Page updated successfully!</div>";
     }
@@ -96,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="mb-3">
-                <label for="content_html" class="form-label">Page Content (HTML)</label>
+                <label for="content_html" class="form-label">content_html</label>
                 <textarea name="content_html" id="content_html" rows="10" class="form-control" placeholder="Enter HTML content..."><?= htmlspecialchars($content_html) ?></textarea>
             </div>
 
