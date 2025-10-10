@@ -37,7 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
     $status = strtolower($_POST['status'] ?? 'draft');
-
     $content_html = $_POST['content_html'] ?? '';
 
     if ($title === '') {
@@ -51,10 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $updated_at = date('Y-m-d H:i:s');
 
         try {
-          $stmt = $pdo->prepare("INSERT INTO pages (title, slug, status, content_html, updated_at) VALUES (?, ?, ?, ?, ?)");
-$stmt->execute([$title, $slug, $status, $content_html, $updated_at]);
+            $stmt = $pdo->prepare("INSERT INTO pages (title, slug, status, content_html, updated_at) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$title, $slug, $status, $content_html, $updated_at]);
 
- 
             header("Location: pages.php?created=1");
             exit;
         } catch (PDOException $e) {
@@ -65,8 +63,9 @@ $stmt->execute([$title, $slug, $status, $content_html, $updated_at]);
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Create New Page</title>
     <style>
         body {

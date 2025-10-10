@@ -1,57 +1,94 @@
+<?php
+// Start the session
+session_start();
+
+// Include DB connection
+require 'db.php';
+
+// Get the page slug from the query parameter, default to null if not provided
+$pageSlug = $_GET['page'] ?? null;
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chandusoft</title>
-    
+
     <!-- External Styles -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <!-- Optional Meta -->
     <meta name="description" content="Chandusoft delivers IT and BPO solutions with over 15 years of experience.">
-
 </head>
 <body>
 
-    <!-- Header Include -->
+    <!-- Header Include (Navbar) -->
     <?php include("header.php"); ?>
 
     <!-- Main Content -->
     <main>
-        <section class="hero">
-            <div class="hero-overlay">
-                <div class="hero-content">
-                    <h2>Welcome to Chandusoft</h2>
-                    <p>Delivering IT & BPO solutions for over 15 years.</p>
-                    <a href="services.php" class="hero-btn">Explore Services</a>
-                </div>
-            </div>
-        </section>
-    </main>
+        <?php
+        // If a page slug is provided, fetch the page content from the database
+        if ($pageSlug) {
+            try {
+                $stmt = $pdo->prepare("SELECT * FROM pages WHERE slug = ? AND LOWER(status) = 'published'");
+                $stmt->execute([$pageSlug]);
+                $page = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    <!-- Testimonials -->
-    <section class="testimonials">
-        <h2 class="section-title">What Our Clients Say</h2>
-        <div class="testimonial-container">
-            <div class="testimonial-card">
-                <p>"Chandusoft helped us streamline our processes. Their 24/7 support means we never miss a client query."</p>
-                <h4>John Smith</h4>
-                <span class="role">Operations Manager, GlobalTech</span>
-            </div>
-            <div class="testimonial-card">
-                <p>"Our e-commerce platform scaled smoothly after migrating with Chandusoft. Sales grew by 40% in just 6 months!"</p>
-                <h4>Priya Verma</h4>
-                <span class="role">Founder, TrendyMart</span>
-            </div>
-            <div class="testimonial-card">
-                <p>"The QA team at Chandusoft made our product launch seamless. Bug-free delivery on time!"</p>
-                <h4>Ahmed Khan</h4>
-                <span class="role">Product Lead, Medisoft</span>
-            </div>
-        </div>
-    </section>
+                if ($page) {
+                    // Include the layout for the specific page (no hero section)
+                    include("views/layout.php");  
+                } else {
+                    // If no page found, show 404
+                    include("views/404.php");
+                }
+            } catch (PDOException $e) {
+                error_log($e->getMessage(), 3, 'error_log.txt');
+                echo "An error occurred. Please try again later.";
+            }
+        } else {
+            // If no page slug is provided (i.e., homepage), display the hero section
+            ?>
+            <!-- Hero Section for Homepage -->
+            <section class="hero">
+                <div class="hero-overlay">
+                    <div class="hero-content">
+                        <h2>Welcome to Chandusoft</h2>
+                        <p>Delivering IT & BPO solutions for over 15 years.</p>
+                        <a href="services.php" class="hero-btn">Explore Services</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Testimonials Section -->
+            <section class="testimonials">
+                <h2 class="section-title">What Our Clients Say</h2>
+                <div class="testimonial-container">
+                    <div class="testimonial-card">
+                        <p>"Chandusoft helped us streamline our processes. Their 24/7 support means we never miss a client query."</p>
+                        <h4>John Smith</h4>
+                        <span class="role">Operations Manager, GlobalTech</span>
+                    </div>
+                    <div class="testimonial-card">
+                        <p>"Our e-commerce platform scaled smoothly after migrating with Chandusoft. Sales grew by 40% in just 6 months!"</p>
+                        <h4>Priya Verma</h4>
+                        <span class="role">Founder, TrendyMart</span>
+                    </div>
+                    <div class="testimonial-card">
+                        <p>"The QA team at Chandusoft made our product launch seamless. Bug-free delivery on time!"</p>
+                        <h4>Ahmed Khan</h4>
+                        <span class="role">Product Lead, Medisoft</span>
+                    </div>
+                </div>
+            </section>
+            <?php
+        }
+        ?>
+    </main>
 
     <!-- Footer Include -->
     <?php include("footer.php"); ?>
