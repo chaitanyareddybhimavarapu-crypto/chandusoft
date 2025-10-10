@@ -1,6 +1,7 @@
 <?php
 session_start();
-require 'db.php';  // Your PDO connection
+require 'db.php';
+require 'app/logger.php'; // ✅ Logging
 
 // CSRF token generation
 if (empty($_SESSION['csrf_token'])) {
@@ -13,6 +14,7 @@ $inputEmail = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $postedToken = $_POST['csrf_token'] ?? '';
     if (!$postedToken || !hash_equals($_SESSION['csrf_token'], $postedToken)) {
+        log_error("Invalid CSRF token for login attempt.");
         die('⛔ Security token invalid.');
     }
 
@@ -26,26 +28,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($inputPassword === '') {
         $error = 'Password is required.';
     } else {
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-        $stmt->execute([$inputEmail]);
-        $user = $stmt->fetch();
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
+            $stmt->execute([$inputEmail]);
+            $user = $stmt->fetch();
 
-        if ($user && password_verify($inputPassword, $user['password'])) {
-            $_SESSION['user'] = [
-                'id' => $user['id'],
-                'email' => $user['email'],
-                'name' => $user['name'],
-                'role' => $user['role'],
-            ];
-            $_SESSION['flash'] = '✅ Login successful!';
-            header('Location: dashboard.php');
-            exit;
-        } else {
-            $error = 'Invalid email or password.';
+            if ($user && password_verify($inputPassword, $user['password'])) {
+                $_SESSION['user'] = [
+                    'id' => $user['id'],
+                    'email' => $user['email'],
+                    'name' => $user['name'],
+                    'role' => $user['role'],
+                ];
+                $_SESSION['flash'] = '✅ Login successful!';
+                header('Location: dashboard.php');
+                exit;
+            } else {
+                log_error("⚠️ Failed login attempt for email: $inputEmail");
+                $error = 'Invalid email or password.';
+            }
+        } catch (Exception $e) {
+            log_error("❌ DB error during login for $inputEmail: " . $e->getMessage());
+            $error = 'An unexpected error occurred. Please try again.';
         }
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
