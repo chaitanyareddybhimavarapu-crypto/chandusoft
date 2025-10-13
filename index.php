@@ -5,8 +5,8 @@ session_start();
 // Include DB connection
 require 'db.php';
 
-// Get the page slug from the query parameter, default to null if not provided
-$pageSlug = $_GET['page'] ?? null;
+// Get the page slug from the clean URL
+$pageSlug = $_GET['page'] ?? null;  // No need for "index.php?page=..." after .htaccess
 
 ?>
 
@@ -35,15 +35,16 @@ $pageSlug = $_GET['page'] ?? null;
         // If a page slug is provided, fetch the page content from the database
         if ($pageSlug) {
             try {
+                // Fetch the page from the database based on the slug
                 $stmt = $pdo->prepare("SELECT * FROM pages WHERE slug = ? AND LOWER(status) = 'published'");
                 $stmt->execute([$pageSlug]);
                 $page = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($page) {
-                    // Include the layout for the specific page (no hero section)
+                    // Include the layout for the specific page (this layout will display the page content)
                     include("views/layout.php");  
                 } else {
-                    // If no page found, show 404
+                    // If no page found, show 404 page
                     include("views/404.php");
                 }
             } catch (PDOException $e) {
@@ -51,7 +52,7 @@ $pageSlug = $_GET['page'] ?? null;
                 echo "An error occurred. Please try again later.";
             }
         } else {
-            // If no page slug is provided (i.e., homepage), display the hero section
+            // If no page slug is provided, i.e., the homepage is being accessed
             ?>
             <!-- Hero Section for Homepage -->
             <section class="hero">

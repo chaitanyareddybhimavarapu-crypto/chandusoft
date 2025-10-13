@@ -23,7 +23,7 @@ $publishedPages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <!-- Dynamically Generated Published Pages from Admin -->
         <?php foreach ($publishedPages as $page): ?>
-            <a href="index.php?page=<?= urlencode($page['slug']) ?>">
+            <a href="/<?= htmlspecialchars($page['slug']) ?>">
                 <button><b><?= htmlspecialchars($page['title']) ?></b></button>
             </a>
         <?php endforeach; ?>
