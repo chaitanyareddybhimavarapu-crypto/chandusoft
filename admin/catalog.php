@@ -103,14 +103,21 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
             background-color: #00408d;
         }
 
-        .action-link {
-            text-decoration: none;
-            color: #007bff;
-            font-weight: bold;
+        /* Actions Section */
+        .actions {
+            margin-bottom: 20px;
+            text-align: right;
         }
 
-        .action-link:hover {
-            color: #0056b3;
+        .actions a {
+            margin-right: 10px;
+            font-size: 16px;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .actions a:hover {
+            text-decoration: underline;
         }
 
         /* Table styles */
@@ -174,7 +181,7 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
             border-radius: 4px;
         }
 
-        /* Responsive */
+        /* Responsive Design */
         @media (max-width: 768px) {
             form {
                 flex-direction: column;
@@ -201,12 +208,16 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="container">
         <h1>Catalog Items</h1>
 
+        <div class="actions">
+            <!-- Archived Items Button -->
+            <a href="catalog-archived.php" class="action-link">View Archived Items</a> |
+            <a href="catalog-new.php" class="action-link">Add New Item</a>
+        </div>
+
         <form method="get" action="catalog.php">
             <input type="text" name="search" placeholder="Search by title or slug" value="<?= htmlspecialchars($search) ?>" />
             <button type="submit">Search</button>
         </form>
-
-        <a href="catalog-new.php" class="action-link">Add New Item</a>
 
         <table>
             <thead>

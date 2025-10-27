@@ -1,1 +1,38 @@
 [2025-10-25 07:38:27] Admin viewed catalog list - Page: 1, Search: ''
+[2025-10-27 05:03:19] New catalog item created: Title='harry1', Slug='test2', Price=56, Status='published'
+[2025-10-27 05:14:18] Image upload failed for new item 'hatty' (slug: test). Reason: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 05:14:18] Catalog item creation failed for 'hatty' due to validation errors: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 05:14:42] Image upload failed for new item 'hat' (slug: test). Reason: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 05:14:42] Catalog item creation failed for 'hat' due to validation errors: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 05:16:17] New catalog item created: Title='hat', Slug='blue', Price=67, Status='published'
+[2025-10-27 05:20:04] Catalog item creation failed - duplicate slug 'test'.
+[2025-10-27 05:20:11] New catalog item created: Title='hat', Slug='test7', Price=78, Status='archived'
+[2025-10-27 05:38:27] Catalog item updated: ID=29, Title='hat', Slug='blue', Price=66.00, Status='published'
+[2025-10-27 05:39:19] Image upload failed while editing item 'hat' (ID: 29). Reason: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 05:39:19] Catalog item edit failed for ID=29 ('hat') due to validation errors: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 05:46:46] New catalog item created: Title='title', Slug='23', Price=45, Status='published'
+[2025-10-27 05:47:14] Image upload failed while editing item 'hat' (ID: 29). Reason: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 05:47:14] Catalog item edit failed for ID=29 ('hat') due to validation errors: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 05:47:47] Catalog item updated: ID=29, Title='hat', Slug='blue', Price=66.00, Status='archived'
+[2025-10-27 05:47:55] Catalog item updated: ID=32, Title='title', Slug='23', Price=45.00, Status='archived'
+[2025-10-27 05:50:07] Image upload failed while editing item 'title' (ID: 32). Reason: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 05:50:07] Catalog item edit failed for ID=32 ('title') due to validation errors: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 06:19:06] Image upload failed for new item 'table' (slug: white). Reason: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 06:19:06] Catalog item creation failed for 'table' due to validation errors: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 06:19:20] New catalog item created: Title='table', Slug='white', Price=343, Status='published'
+[2025-10-27 06:20:58] Catalog item updated: ID=33, Title='tables', Slug='white', Price=34.00, Status='published'
+[2025-10-27 06:54:22] Catalog item creation failed - duplicate slug '2'.
+[2025-10-27 06:54:28] New catalog item created: Title='harry1', Slug='26', Price=23, Status='published'
+[2025-10-27 06:54:42] Image upload failed while editing item 'harry1' (ID: 35). Reason: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 06:54:42] Catalog item edit failed for ID=35 ('harry1') due to validation errors: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 06:54:54] Catalog item updated: ID=35, Title='harry1', Slug='26', Price=23.00, Status='published'
+[2025-10-27 06:55:54] Image upload failed for new item 'harry1' (slug: 55). Reason: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 06:55:54] Catalog item creation failed for 'harry1' due to validation errors: Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.
+[2025-10-27 06:56:09] New catalog item created: Title='harry1', Slug='55', Price=568, Status='published'
+[2025-10-27 06:56:29] Catalog item updated: ID=35, Title='harry1', Slug='26', Price=26.00, Status='published'
+[2025-10-27 06:56:39] Catalog item updated: ID=35, Title='harry1', Slug='26', Price=8787, Status='published'
+[2025-10-27 07:00:28] Catalog item updated: ID=36, Title='harry1', Slug='55', Price=56.00, Status='published'
+[2025-10-27 07:01:04] New catalog item created: Title='food', Slug='34', Price=456, Status='published'
+[2025-10-27 07:03:24] Catalog item creation failed - duplicate slug '34'.
+[2025-10-27 07:03:28] New catalog item created: Title='violin', Slug='56', Price=456, Status='published'
+[2025-10-27 07:03:49] Catalog item updated: ID=39, Title='violin', Slug='56', Price=456.00, Status='published'

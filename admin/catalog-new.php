@@ -1,109 +1,120 @@
 <?php
 require_once __DIR__ . '/../app/config.php';
-require_once __DIR__ . '/../app/upload.php';  // Ensure this is included for the uploadImage function
- 
+require_once __DIR__ . '/../app/upload.php';
+require_once __DIR__ . '/../app/logger.php'; // ✅ Include the logger
+
 $errors = [];
 $title = '';
 $slug = '';
 $price = '';
 $short_desc = '';
 $status = 'published';
- 
+$image_path = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Collect and sanitize form data
     $title = trim($_POST['title'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
     $price = trim($_POST['price'] ?? '');
     $short_desc = trim($_POST['short_desc'] ?? '');
     $status = $_POST['status'] ?? 'published';
- 
-    // Basic validation checks
+
+    // --- VALIDATION ---
     if ($title === '') {
         $errors[] = 'Title is required.';
     }
     if ($slug === '') {
         $errors[] = 'Slug is required.';
-    }
-    if (!preg_match('/^[a-z0-9\-]+$/', $slug)) {
+    } elseif (!preg_match('/^[a-z0-9\-]+$/', $slug)) {
         $errors[] = 'Slug can only contain lowercase letters, numbers, and hyphens.';
     }
-    if (!is_numeric($price) || $price < 0) {
+    if ($price === '' || !is_numeric($price) || $price < 0) {
         $errors[] = 'Price must be a non-negative number.';
     }
- 
-    // Image upload handling
-    $image_path = null;
+
+    // --- IMAGE UPLOAD HANDLING ---
     if (!empty($_FILES['image']['name'])) {
-        // Call the uploadImage function with the $_FILES array
         $uploaded = uploadImage($_FILES['image']);
         if ($uploaded === false) {
-            $errors[] = 'Invalid image upload. Allowed types: jpg, png, gif, webp. Max size 2MB.';
+            $errorMsg = 'Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.';
+            $errors[] = $errorMsg;
+
+            // ✅ Log this specific image upload error
+            logCatalogAction("Image upload failed for new item '{$title}' (slug: {$slug}). Reason: {$errorMsg}");
         } else {
-            $image_path = $uploaded;  // Store the uploaded image path
+            $image_path = $uploaded;
         }
-    } else {
-        $errors[] = 'Product image is required.';
     }
- 
-    // If no validation errors, proceed to insert into the database
+
+    // --- IF VALIDATION PASSES ---
     if (empty($errors)) {
         try {
-            $stmt = $pdo->prepare("INSERT INTO catalog_items (slug, title, price, short_desc, image_path, status) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("
+                INSERT INTO catalog_items (slug, title, price, short_desc, image_path, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+            ");
             $stmt->execute([$slug, $title, $price, $short_desc, $image_path, $status]);
- 
-            header('Location: catalog.php');  // Redirect to catalog after successful insert
+
+            // ✅ Log success
+            logCatalogAction("New catalog item created: Title='{$title}', Slug='{$slug}', Price={$price}, Status='{$status}'");
+
+            header('Location: catalog.php');
             exit;
         } catch (PDOException $e) {
-            if ($e->getCode() == 23000) {  // Duplicate slug error code
-                $errors[] = 'Slug already exists. Choose a different one.';
+            if ($e->getCode() == 23000) {
+                $errorMsg = 'Slug already exists. Please use a unique one.';
+                $errors[] = $errorMsg;
+                logCatalogAction("Catalog item creation failed - duplicate slug '{$slug}'.");
             } else {
-                $errors[] = 'Database error: ' . $e->getMessage();
+                $errorMsg = 'Database error: ' . $e->getMessage();
+                $errors[] = $errorMsg;
+                log_error("Database error during catalog-new: " . $e->getMessage());
+                logCatalogAction("Database error while creating '{$title}': " . $e->getMessage());
             }
         }
+    } else {
+        // ✅ Log validation failures
+        logCatalogAction("Catalog item creation failed for '{$title}' due to validation errors: " . implode('; ', $errors));
     }
 }
 ?>
- 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Add New Catalog Item</title>
+    <meta charset="UTF-8">
+    <title>Create New Catalog Item</title>
     <style>
-        /* Global styles */
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             background-color: #f4f4f9;
             margin: 0;
             padding: 0;
-            color: #333;
         }
- 
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
         h1 {
             text-align: center;
             color: #0056b3;
-            margin: 20px 0;
         }
- 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
- 
+
         .form-group {
             margin-bottom: 15px;
         }
- 
+
         label {
             font-weight: bold;
             display: block;
             margin-bottom: 5px;
         }
- 
+
         input[type="text"],
         input[type="number"],
         textarea,
@@ -111,125 +122,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         input[type="file"] {
             width: 100%;
             padding: 10px;
-            margin: 5px 0;
             border: 1px solid #ccc;
             border-radius: 4px;
         }
- 
-        textarea {
-            resize: vertical;
-        }
- 
+
         button {
-            padding: 12px 20px;
             background-color: #007bff;
             color: white;
             border: none;
+            padding: 12px;
+            width: 100%;
+            font-size: 16px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
-            width: 100%;
         }
- 
+
         button:hover {
             background-color: #0056b3;
         }
- 
+
         .error-list {
-            color: red;
             background-color: #f8d7da;
+            color: #842029;
             padding: 10px;
-            border-radius: 5px;
+            border-radius: 4px;
             margin-bottom: 20px;
         }
- 
-        .error-list li {
-            margin: 5px 0;
-        }
- 
+
         .back-link {
             display: block;
             text-align: center;
-            margin-top: 20px;
+            margin-top: 15px;
             color: #007bff;
-            font-size: 16px;
             text-decoration: none;
         }
- 
+
         .back-link:hover {
             text-decoration: underline;
         }
- 
-        /* Responsive design */
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
-            }
- 
-            h1 {
-                font-size: 24px;
             }
         }
     </style>
 </head>
 <body>
- 
-    <div class="container">
-        <h1>Add New Catalog Item</h1>
- 
-        <!-- Display errors if there are any -->
-        <?php if ($errors): ?>
-            <div class="error-list">
-                <ul>
-                    <?php foreach ($errors as $error): ?>
-                        <li><?= htmlspecialchars($error) ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php endif; ?>
- 
-        <!-- Catalog Item Form -->
-        <form method="post" enctype="multipart/form-data" action="catalog-new.php">
-            <div class="form-group">
-                <label for="title">Title:</label>
-                <input type="text" id="title" name="title" value="<?= htmlspecialchars($title) ?>" required>
-            </div>
- 
-            <div class="form-group">
-                <label for="slug">Slug:</label>
-                <input type="text" id="slug" name="slug" value="<?= htmlspecialchars($slug) ?>" required placeholder="lowercase letters, numbers, hyphens only">
-            </div>
- 
-            <div class="form-group">
-                <label for="price">Price:</label>
-                <input type="number" id="price" name="price" value="<?= htmlspecialchars($price) ?>" step="0.01" min="0" required>
-            </div>
- 
-            <div class="form-group">
-                <label for="short_desc">Short Description:</label>
-                <textarea id="short_desc" name="short_desc" rows="4"><?= htmlspecialchars($short_desc) ?></textarea>
-            </div>
- 
-            <div class="form-group">
-                <label for="status">Status:</label>
-                <select id="status" name="status">
-                    <option value="published" <?= $status === 'published' ? 'selected' : '' ?>>Published</option>
-                    <option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archived</option>
-                </select>
-            </div>
- 
-            <div class="form-group">
-                <label for="image">Product Image:</label>
-                <input type="file" id="image" name="image" accept="image/*" required>
-            </div>
- 
-            <button type="submit">Add Item</button>
-        </form>
- 
-        <p><a href="catalog.php" class="back-link">Back to catalog list</a></p>
-    </div>
- 
+
+<div class="container">
+    <h1>Create New Catalog Item</h1>
+
+    <?php if ($errors): ?>
+        <div class="error-list">
+            <ul>
+                <?php foreach ($errors as $error): ?>
+                    <li><?= htmlspecialchars($error) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
+
+    <form method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="title">Title:</label>
+            <input type="text" id="title" name="title" value="<?= htmlspecialchars($title) ?>" required>
+        </div>
+
+        <div class="form-group">
+            <label for="slug">Slug:</label>
+            <input type="text" id="slug" name="slug" value="<?= htmlspecialchars($slug) ?>" placeholder="e.g., blue-tshirt" required>
+        </div>
+
+        <div class="form-group">
+            <label for="price">Price ($):</label>
+            <input type="number" id="price" name="price" value="<?= htmlspecialchars($price) ?>" step="0.01" min="0" required>
+        </div>
+
+        <div class="form-group">
+            <label for="short_desc">Short Description:</label>
+            <textarea id="short_desc" name="short_desc" rows="4"><?= htmlspecialchars($short_desc) ?></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="status">Status:</label>
+            <select id="status" name="status">
+                <option value="published" <?= $status === 'published' ? 'selected' : '' ?>>Published</option>
+                <option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archived</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="image">Upload Image (optional):</label>
+            <input type="file" id="image" name="image" accept="image/*">
+        </div>
+
+        <button type="submit">Create Item</button>
+    </form>
+
+    <a href="catalog.php" class="back-link">Back to Catalog List</a>
+</div>
+
 </body>
 </html>
- 
- 
