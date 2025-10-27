@@ -50,43 +50,159 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8" />
     <title>Catalog - Published Items</title>
     <style>
+        /* Global styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #0056b3;
+            margin-top: 30px;
+        }
+
+        .search-form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .search-form input[type="text"] {
+            padding: 8px;
+            font-size: 16px;
+            width: 300px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .search-form button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .search-form button:hover {
+            background-color: #0056b3;
+        }
+
         .catalog-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 1rem;
+            margin: 0 auto;
+            padding: 20px;
+            max-width: 1200px;
         }
+
         .catalog-item {
-            border: 1px solid #ccc;
-            padding: 10px;
+            border: 1px solid #ddd;
             border-radius: 6px;
+            padding: 10px;
             text-align: center;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.3s ease-in-out;
         }
+
+        .catalog-item:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
         .catalog-item img {
             max-width: 100%;
             max-height: 150px;
             object-fit: contain;
+            margin-bottom: 10px;
+        }
+
+        .catalog-item h3 {
+            font-size: 18px;
             margin-bottom: 8px;
         }
-        .pagination a, .pagination strong {
-            margin: 0 5px;
-            text-decoration: none;
+
+        .catalog-item p {
+            font-size: 16px;
+            color: #555;
         }
+
+        .catalog-item a {
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .catalog-item a:hover {
+            text-decoration: underline;
+        }
+
+        /* Pagination styles */
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .pagination a, .pagination strong {
+            padding: 8px 16px;
+            margin: 0 5px;
+            border: 1px solid #007bff;
+            color: #007bff;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+
+        .pagination a:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
         .pagination strong {
             font-weight: bold;
+            background-color: #007bff;
+            color: white;
         }
-        form.search-form {
-            margin-bottom: 20px;
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .catalog-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .catalog-item img {
+                max-height: 120px;
+            }
+
+            .pagination a, .pagination strong {
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+
+            .search-form input[type="text"] {
+                width: 250px;
+            }
+
+            .search-form button {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
 <body>
     <h1>Catalog - Published Items</h1>
 
+    <!-- Search form -->
     <form method="get" action="catalog.php" class="search-form">
         <input type="text" name="search" placeholder="Search by title or slug" value="<?= htmlspecialchars($search) ?>" />
         <button type="submit">Search</button>
     </form>
 
+    <!-- Catalog Grid -->
     <div class="catalog-grid">
         <?php if (count($items) === 0): ?>
             <p>No items found.</p>
@@ -107,17 +223,18 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <?php endif; ?>
     </div>
 
+    <!-- Pagination -->
     <?php if ($totalPages > 1): ?>
-    <div class="pagination">
-        Pages:
-        <?php for ($p = 1; $p <= $totalPages; $p++): ?>
-            <?php if ($p === $page): ?>
-                <strong><?= $p ?></strong>
-            <?php else: ?>
-                <a href="?page=<?= $p ?>&search=<?= urlencode($search) ?>"><?= $p ?></a>
-            <?php endif; ?>
-        <?php endfor; ?>
-    </div>
+        <div class="pagination">
+            Pages:
+            <?php for ($p = 1; $p <= $totalPages; $p++): ?>
+                <?php if ($p === $page): ?>
+                    <strong><?= $p ?></strong>
+                <?php else: ?>
+                    <a href="?page=<?= $p ?>&search=<?= urlencode($search) ?>"><?= $p ?></a>
+                <?php endif; ?>
+            <?php endfor; ?>
+        </div>
     <?php endif; ?>
 </body>
 </html>
