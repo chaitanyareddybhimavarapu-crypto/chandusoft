@@ -2,6 +2,10 @@
 session_start();
 require 'db.php'; // Your PDO connection
 
+$user = $_SESSION['user'];
+$name = htmlspecialchars($user['name']);
+$role = $user['role'] ?? 'user';
+
 // Redirect if user is not logged in
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
@@ -59,18 +63,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-<nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="dashboard.php">Chandusoft Admin</a>
-        <div>
-            <span class="navbar-text text-white me-3">Welcome <?= htmlspecialchars($_SESSION['user']['role']) ?>!</span>
-            <a href="dashboard.php" class="text-white me-2">Dashboard</a>
-            <a href="admin-leads.php" class="text-white me-2">Leads</a>
-            <a href="pages.php" class="text-white me-2">Pages</a>
-            <a href="logout.php" class="text-white">Logout</a>
-        </div>
-    </div>
-</nav>
+<div class="navbar">
+  <div><strong>Chandusoft Admin</strong></div>
+  <div>
+    <span>Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
+    <a href="dashboard.php">Dashboard</a>
+    
+    <!-- Dynamic catalog link based on user role -->
+    <?php if ($role === 'admin'): ?>
+        <a href="admin/catalog.php">Admin Catalog</a>
+          <a href="public/catalog.php">Public Catalog</a>
+    <?php elseif ($role === 'editor'): ?>
+        <a href="public/catalog.php">Public Catalog</a>
+    <?php endif; ?>
+
+    <a href="admin-leads.php">Leads</a>
+    <a href="pages.php">Pages</a>
+    <a href="logout.php">Logout</a>
+  </div>
+</div>
+
 
 <div class="container mt-5">
     <div class="card p-4 shadow-sm">
@@ -112,3 +124,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+ <style>
+       body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    .navbar {
+      background-color: #2c3e50;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+    }
+
+    .navbar a {
+      color: white;
+      margin-left: 15px;
+      text-decoration: none;
+    }
+
+    .navbar a:hover {
+      text-decoration: none;
+    }
+     </style>

@@ -8,8 +8,10 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
+
 $user = $_SESSION['user'];
-$role = $user['role'];
+$name = htmlspecialchars($user['name']);
+$role = $user['role'] ?? 'user';
 
 // Filters
 $statusFilter = $_GET['status'] ?? 'all';
@@ -74,28 +76,30 @@ $pages = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title>Pages</title>
     <style>
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #f4f6fa;
-            margin: 0;
-            padding: 0;
-        }
-        .navbar {
-            background-color: #2c3e50;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-        }
-        .navbar a {
-            color: white;
-            margin-left: 15px;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .navbar a:hover {
-            text-decoration: underline;
-        }
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    .navbar {
+      background-color: #2c3e50;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+    }
+
+    .navbar a {
+      color: white;
+      margin-left: 15px;
+      text-decoration: none;
+    }
+
+    .navbar a:hover {
+      text-decoration: underline;
+    }
         .container {
             max-width: 1100px;
             margin: 30px auto;
@@ -231,15 +235,25 @@ $pages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
 
 <div class="navbar">
-    <div class="logo">Chandusoft Admin</div>
-    <div class="menu">
-        <span>Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
-        <a href="dashboard.php">Dashboard</a>
-        <a href="admin-leads.php">Leads</a>
-        <a href="pages.php">Pages</a>
-        <a href="logout.php">Logout</a>
-    </div>
+  <div><strong>Chandusoft Admin</strong></div>
+  <div>
+    <span>Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
+    <a href="dashboard.php">Dashboard</a>
+    
+    <!-- Dynamic catalog link based on user role -->
+    <?php if ($role === 'admin'): ?>
+        <a href="admin/catalog.php">Admin Catalog</a>
+          <a href="public/catalog.php">Public Catalog</a>
+    <?php elseif ($role === 'editor'): ?>
+        <a href="public/catalog.php">Public Catalog</a>
+    <?php endif; ?>
+
+    <a href="admin-leads.php">Leads</a>
+    <a href="pages.php">Pages</a>
+    <a href="logout.php">Logout</a>
+  </div>
 </div>
+
 
 <div class="container">
     <h2>Pages</h2>

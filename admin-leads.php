@@ -122,6 +122,15 @@ $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="menu">
         <span class="welcome">Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
         <a href="dashboard.php">Dashboard</a>
+
+        <!-- Dynamic catalog link based on user role -->
+        <?php if ($role === 'admin'): ?>
+            <a href="admin/catalog.php">Admin Catalog</a>
+            <a href="public/catalog.php">Public Catalog</a>
+        <?php elseif ($role === 'editor'): ?>
+            <a href="public/catalog.php">Public Catalog</a>
+        <?php endif; ?>
+
         <a href="admin-leads.php">Leads</a>
         <a href="pages.php">Pages</a>
         <a href="logout.php">Logout</a>

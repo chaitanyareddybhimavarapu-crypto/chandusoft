@@ -2,6 +2,7 @@
 // Start session and connect to DB
 session_start();
 
+
 // Check login
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
@@ -68,26 +69,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <title>Create New Page</title>
     <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #f4f6fa;
-            margin: 0;
-        }
+       body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f6fa;
+      margin: 0;
+      padding: 0;
+    }
 
-        .navbar {
-            background-color: #2c3e50;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-        }
+    .navbar {
+      background-color: #2c3e50;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: white;
+    }
 
-        .navbar a {
-            color: white;
-            margin-left: 15px;
-            text-decoration: none;
-        }
+    .navbar a {
+      color: white;
+      margin-left: 15px;
+      text-decoration: none;
+    }
+
+    .navbar a:hover {
+      text-decoration: none;
+    }
 
         .container {
             max-width: 700px;
@@ -153,29 +159,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .back-link:hover {
-            text-decoration: underline;
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
 
 <div class="navbar">
-    <div><strong>Chandusoft Admin</strong></div>
-    <div>
-        <span>Welcome <?= ucfirst($role) ?>!</span>
-        <a href="dashboard.php">Dashboard</a>
-        <a href="pages.php">Pages</a>
-        <a href="logout.php">Logout</a>
-    </div>
+  <div><strong>Chandusoft Admin</strong></div>
+  <div>
+    <span>Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
+    <a href="dashboard.php">Dashboard</a>
+    
+    <!-- Dynamic catalog link based on user role -->
+    <?php if ($role === 'admin'): ?>
+        <a href="admin/catalog.php">Admin Catalog</a>
+          <a href="public/catalog.php">Public Catalog</a>
+    <?php elseif ($role === 'editor'): ?>
+        <a href="public/catalog.php">Public Catalog</a>
+    <?php endif; ?>
+
+    <a href="admin-leads.php">Leads</a>
+    <a href="pages.php">Pages</a>
+    <a href="logout.php">Logout</a>
+  </div>
 </div>
+
 
 <div class="container">
     <h1>Create New Page</h1>
 
-    <?php if ($error): ?>
-        <div class="error"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
+   
     <form method="POST" action="create.php">
         <label for="title">Page Title *</label>
         <input type="text" name="title" id="title" required>

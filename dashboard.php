@@ -106,6 +106,15 @@ $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <div>
     <span>Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
     <a href="dashboard.php">Dashboard</a>
+    
+    <!-- Dynamic catalog link based on user role -->
+    <?php if ($role === 'admin'): ?>
+        <a href="admin/catalog.php">Admin Catalog</a>
+          <a href="public/catalog.php">Public Catalog</a>
+    <?php elseif ($role === 'editor'): ?>
+        <a href="public/catalog.php">Public Catalog</a>
+    <?php endif; ?>
+
     <a href="admin-leads.php">Leads</a>
     <a href="pages.php">Pages</a>
     <a href="logout.php">Logout</a>
@@ -129,8 +138,7 @@ $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
       <th>Email</th>
       <th>Message</th>
       <th>Created</th>
-     <th>IP</th>
-
+      <th>IP</th>
     </tr>
     <?php foreach ($leads as $lead): ?>
       <tr>
