@@ -111,6 +111,7 @@ $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php if ($role === 'admin'): ?>
         <a href="admin/catalog.php">Admin Catalog</a>
           <a href="public/catalog.php">Public Catalog</a>
+          <a href="admin/orders.php">orders</a>
     <?php elseif ($role === 'editor'): ?>
         <a href="public/catalog.php">Public Catalog</a>
     <?php endif; ?>

@@ -1,7 +1,11 @@
 <?php
 require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/upload.php';
-require_once __DIR__ . '/../app/logger.php'; // ✅ Include the logger
+require_once __DIR__ . '/../app/logger.php';
+require_once __DIR__ . '/../vendor/autoload.php'; // PHPMailer
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $errors = [];
 $title = '';
@@ -11,6 +15,27 @@ $short_desc = '';
 $status = 'published';
 $image_path = '';
 
+// --- Function to send email to Mailpit ---
+function sendMailpitNotification($subject, $body) {
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host = '127.0.0.1'; // Mailpit host
+        $mail->Port = 1025;        // Mailpit SMTP port
+        $mail->SMTPAuth = false;
+
+        $mail->setFrom('no-reply@example.com', 'Catalog App');
+        $mail->addAddress('admin@example.com'); // Mailpit inbox
+
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+
+        $mail->send();
+    } catch (Exception $e) {
+        log_error("Mailer Error: {$mail->ErrorInfo}");
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
@@ -19,33 +44,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status = $_POST['status'] ?? 'published';
 
     // --- VALIDATION ---
-    if ($title === '') {
-        $errors[] = 'Title is required.';
-    }
-    if ($slug === '') {
-        $errors[] = 'Slug is required.';
-    } elseif (!preg_match('/^[a-z0-9\-]+$/', $slug)) {
-        $errors[] = 'Slug can only contain lowercase letters, numbers, and hyphens.';
-    }
-    if ($price === '' || !is_numeric($price) || $price < 0) {
-        $errors[] = 'Price must be a non-negative number.';
-    }
+    if ($title === '') $errors[] = 'Title is required.';
+    if ($slug === '') $errors[] = 'Slug is required.';
+    elseif (!preg_match('/^[a-z0-9\-]+$/', $slug)) $errors[] = 'Slug can only contain lowercase letters, numbers, and hyphens.';
+    if ($price === '' || !is_numeric($price) || $price < 0) $errors[] = 'Price must be a non-negative number.';
 
-    // --- IMAGE UPLOAD HANDLING ---
+    // --- IMAGE UPLOAD ---
     if (!empty($_FILES['image']['name'])) {
         $uploaded = uploadImage($_FILES['image']);
         if ($uploaded === false) {
             $errorMsg = 'Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.';
             $errors[] = $errorMsg;
-
-            // ✅ Log this specific image upload error
             logCatalogAction("Image upload failed for new item '{$title}' (slug: {$slug}). Reason: {$errorMsg}");
+
+            // ✅ Send Mailpit email for image upload failure
+            sendMailpitNotification(
+                'Catalog Image Upload Failed',
+                "Image upload failed for catalog item:\nTitle: $title\nSlug: $slug\nReason: $errorMsg\nTime: ".date('Y-m-d H:i:s')
+            );
         } else {
             $image_path = $uploaded;
         }
     }
 
-    // --- IF VALIDATION PASSES ---
     if (empty($errors)) {
         try {
             $stmt = $pdo->prepare("
@@ -57,6 +78,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // ✅ Log success
             logCatalogAction("New catalog item created: Title='{$title}', Slug='{$slug}', Price={$price}, Status='{$status}'");
 
+            // ✅ Send Mailpit email for successful creation
+            sendMailpitNotification(
+                'New Catalog Item Created',
+                "A new catalog item has been created:\nTitle: $title\nSlug: $slug\nPrice: $price\nStatus: $status\nTime: ".date('Y-m-d H:i:s')
+            );
+
             header('Location: catalog.php');
             exit;
         } catch (PDOException $e) {
@@ -64,19 +91,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errorMsg = 'Slug already exists. Please use a unique one.';
                 $errors[] = $errorMsg;
                 logCatalogAction("Catalog item creation failed - duplicate slug '{$slug}'.");
+
+                sendMailpitNotification(
+                    'Catalog Item Creation Failed - Duplicate Slug',
+                    "Attempted to create a catalog item with duplicate slug: $slug\nTitle: $title\nTime: ".date('Y-m-d H:i:s')
+                );
             } else {
                 $errorMsg = 'Database error: ' . $e->getMessage();
                 $errors[] = $errorMsg;
                 log_error("Database error during catalog-new: " . $e->getMessage());
                 logCatalogAction("Database error while creating '{$title}': " . $e->getMessage());
+
+                sendMailpitNotification(
+                    'Catalog Item Creation Failed - DB Error',
+                    "Database error while creating catalog item:\nTitle: $title\nSlug: $slug\nError: {$e->getMessage()}\nTime: ".date('Y-m-d H:i:s')
+                );
             }
         }
     } else {
         // ✅ Log validation failures
         logCatalogAction("Catalog item creation failed for '{$title}' due to validation errors: " . implode('; ', $errors));
+
+        sendMailpitNotification(
+            'Catalog Item Creation Failed - Validation Errors',
+            "Validation errors occurred for catalog item:\nTitle: $title\nSlug: $slug\nErrors: ".implode('; ', $errors)."\nTime: ".date('Y-m-d H:i:s')
+        );
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">

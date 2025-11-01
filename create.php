@@ -2,7 +2,6 @@
 // Start session and connect to DB
 session_start();
 
-
 // Check login
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
@@ -51,8 +50,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $updated_at = date('Y-m-d H:i:s');
 
         try {
+            // Insert into database
             $stmt = $pdo->prepare("INSERT INTO pages (title, slug, status, content_html, updated_at) VALUES (?, ?, ?, ?, ?)");
             $stmt->execute([$title, $slug, $status, $content_html, $updated_at]);
+
+            // ==============================
+            // 📧 SEND EMAIL NOTIFICATION
+            // ==============================
+            if (in_array($role, ['admin', 'editor'])) {
+                // You can change these if you want different inboxes per role
+                $to = "notify@chandusoft.local";
+                $subject = ($role === 'admin' ? "🛠 Admin" : "✏️ Editor") . " Created a New Page";
+                
+                $message = "
+                    <h2>New Page Created</h2>
+                    <p><strong>Title:</strong> {$title}</p>
+                    <p><strong>Slug:</strong> {$slug}</p>
+                    <p><strong>Status:</strong> {$status}</p>
+                    <p><strong>Created by:</strong> {$name} ({$role})</p>
+                    <p><strong>Time:</strong> {$updated_at}</p>
+                ";
+
+                $headers = "MIME-Version: 1.0\r\n";
+                $headers .= "Content-type:text/html;charset=UTF-8\r\n";
+                $headers .= "From: Chandusoft CMS <no-reply@chandusoft.local>\r\n";
+
+                // Send mail (Mailpit will capture it automatically)
+                mail($to, $subject, $message, $headers);
+            }
+            // ==============================
 
             header("Location: pages.php?created=1");
             exit;
@@ -70,30 +96,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Create New Page</title>
     <style>
        body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6fa;
-      margin: 0;
-      padding: 0;
-    }
+          font-family: 'Segoe UI', sans-serif;
+          background-color: #f4f6fa;
+          margin: 0;
+          padding: 0;
+        }
 
-    .navbar {
-      background-color: #2c3e50;
-      padding: 15px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: white;
-    }
+        .navbar {
+          background-color: #2c3e50;
+          padding: 15px 30px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          color: white;
+        }
 
-    .navbar a {
-      color: white;
-      margin-left: 15px;
-      text-decoration: none;
-    }
+        .navbar a {
+          color: white;
+          margin-left: 15px;
+          text-decoration: none;
+        }
 
-    .navbar a:hover {
-      text-decoration: none;
-    }
+        .navbar a:hover {
+          text-decoration: none;
+        }
 
         .container {
             max-width: 700px;
@@ -174,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Dynamic catalog link based on user role -->
     <?php if ($role === 'admin'): ?>
         <a href="admin/catalog.php">Admin Catalog</a>
-          <a href="public/catalog.php">Public Catalog</a>
+        <a href="public/catalog.php">Public Catalog</a>
     <?php elseif ($role === 'editor'): ?>
         <a href="public/catalog.php">Public Catalog</a>
     <?php endif; ?>
@@ -185,11 +211,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 </div>
 
-
 <div class="container">
     <h1>Create New Page</h1>
 
-   
+    <?php if ($error): ?>
+        <div class="error"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
+
     <form method="POST" action="create.php">
         <label for="title">Page Title *</label>
         <input type="text" name="title" id="title" required>
@@ -204,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <option value="archived">Archived</option>
         </select>
 
-        <label for="content_html">content_html</label>
+        <label for="content_html">Content HTML</label>
         <textarea name="content_html" id="content_html" rows="10" placeholder="Enter HTML content here..."></textarea>
 
         <button type="submit" class="btn">Create Page</button>

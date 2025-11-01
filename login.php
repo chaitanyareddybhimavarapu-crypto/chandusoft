@@ -2,6 +2,10 @@
 session_start();
 require 'db.php';
 require 'app/logger.php'; // ✅ Logging
+require 'vendor/autoload.php'; // PHPMailer
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 // CSRF token generation
 if (empty($_SESSION['csrf_token'])) {
@@ -10,6 +14,27 @@ if (empty($_SESSION['csrf_token'])) {
 
 $error = '';
 $inputEmail = '';
+
+// Function to send email to Mailpit
+function sendMailpitNotification($subject, $body) {
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host = '127.0.0.1';  // Mailpit host
+        $mail->Port = 1025;         // Mailpit SMTP port
+        $mail->SMTPAuth = false;    // No auth needed for Mailpit
+
+        $mail->setFrom('no-reply@example.com', 'Your App');
+        $mail->addAddress('admin@example.com'); // Mailpit inbox
+
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+
+        $mail->send();
+    } catch (Exception $e) {
+        log_error("Mailer Error: {$mail->ErrorInfo}");
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $postedToken = $_POST['csrf_token'] ?? '';
@@ -23,10 +48,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($inputEmail === '') {
         $error = 'Email is required.';
+        sendMailpitNotification('Login Error', "Login error: Email is empty.\nTime: ".date('Y-m-d H:i:s'));
     } elseif (!filter_var($inputEmail, FILTER_VALIDATE_EMAIL)) {
         $error = 'Enter a valid email.';
+        sendMailpitNotification('Login Error', "Login error: Invalid email format ($inputEmail).\nTime: ".date('Y-m-d H:i:s'));
     } elseif ($inputPassword === '') {
         $error = 'Password is required.';
+        sendMailpitNotification('Login Error', "Login error: Password empty for email: $inputEmail\nTime: ".date('Y-m-d H:i:s'));
     } else {
         try {
             $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
@@ -41,20 +69,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'role' => $user['role'],
                 ];
                 $_SESSION['flash'] = '✅ Login successful!';
+
+                // Send success email
+                sendMailpitNotification(
+                    'Login Success',
+                    "User '{$user['email']}' logged in as '{$user['role']}'\nTime: ".date('Y-m-d H:i:s')
+                );
+
                 header('Location: dashboard.php');
                 exit;
             } else {
                 log_error("⚠️ Failed login attempt for email: $inputEmail");
                 $error = 'Invalid email or password.';
+
+                // Send failed login email
+                sendMailpitNotification(
+                    'Failed Login Attempt',
+                    "Failed login attempt for email: $inputEmail\nTime: ".date('Y-m-d H:i:s')
+                );
             }
         } catch (Exception $e) {
             log_error("❌ DB error during login for $inputEmail: " . $e->getMessage());
             $error = 'An unexpected error occurred. Please try again.';
+
+            sendMailpitNotification(
+                'Login DB Error',
+                "Database error for login attempt with email: $inputEmail\nError: ".$e->getMessage()."\nTime: ".date('Y-m-d H:i:s')
+            );
         }
     }
 }
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -131,19 +176,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       text-align: center;
     }
     .register-link {
-  margin-top: 1rem;
-  text-align: center;
-}
+      margin-top: 1rem;
+      text-align: center;
+    }
 
-.register-link a {
-  color: #28a745;
-  text-decoration: none;
-  font-weight: 500;
-}
+    .register-link a {
+      color: #28a745;
+      text-decoration: none;
+      font-weight: 500;
+    }
 
-.register-link a:hover {
-  text-decoration: underline;
-}
+    .register-link a:hover {
+      text-decoration: underline;
+    }
 
   </style>
 </head>
@@ -171,9 +216,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <button type="submit" class="login-btn">Login</button>
     </form>
+
     <div class="register-link">
-  <p>Don't have an account? <a href="register.php">Register here</a>.</p>
-</div>
+      <p>Don't have an account? <a href="register.php">Register here</a>.</p>
+    </div>
 
   </div>
 

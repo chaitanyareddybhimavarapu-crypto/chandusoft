@@ -1,7 +1,31 @@
 <?php
 require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/upload.php';
-require_once __DIR__ . '/../app/logger.php'; // ✅ Added for logging
+require_once __DIR__ . '/../app/logger.php';
+require_once __DIR__ . '/../vendor/autoload.php'; // ✅ For PHPMailer
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+// --- Mailpit Email Function ---
+function sendMailpitNotification($subject, $body) {
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host = '127.0.0.1'; // Mailpit host
+        $mail->Port = 1025;        // Mailpit SMTP port
+        $mail->SMTPAuth = false;   // No authentication for local Mailpit
+
+        $mail->setFrom('no-reply@example.com', 'Catalog App');
+        $mail->addAddress('admin@example.com'); // Mailpit inbox
+
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+        $mail->send();
+    } catch (Exception $e) {
+        log_error("Mailpit Send Error: {$mail->ErrorInfo}");
+    }
+}
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($id <= 0) {
@@ -32,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $short_desc = trim($_POST['short_desc'] ?? '');
     $status = $_POST['status'] ?? 'published';
 
-    // Validation
+    // --- VALIDATION ---
     if ($title === '') {
         $errors[] = 'Title is required.';
     }
@@ -45,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Price must be a non-negative number.';
     }
 
-    // Image upload (optional)
+    // --- IMAGE UPLOAD (Optional) ---
     $uploaded = null;
     if (!empty($_FILES['image']['name'])) {
         $uploaded = uploadImage($_FILES['image']);
@@ -53,11 +77,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errorMsg = 'Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.';
             $errors[] = $errorMsg;
 
-            // ✅ Log this image upload error
+            // Log + Email error
             logCatalogAction("Image upload failed while editing item '{$title}' (ID: {$id}). Reason: {$errorMsg}");
+            sendMailpitNotification(
+                'Catalog Item Edit - Image Upload Failed',
+                "Item ID: $id\nTitle: $title\nSlug: $slug\nError: $errorMsg\nTime: " . date('Y-m-d H:i:s')
+            );
         }
     }
 
+    // --- PROCESS UPDATE ---
     if (empty($errors)) {
         try {
             if ($uploaded !== null) {
@@ -75,8 +104,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
 
-            // ✅ Log successful update
+            // ✅ Log + Send Mailpit Notification
             logCatalogAction("Catalog item updated: ID={$id}, Title='{$title}', Slug='{$slug}', Price={$price}, Status='{$status}'");
+
+            sendMailpitNotification(
+                'Catalog Item Updated Successfully',
+                "The following catalog item was updated:\n\nID: $id\nTitle: $title\nSlug: $slug\nPrice: $price\nStatus: $status\nTime: " . date('Y-m-d H:i:s')
+            );
 
             header('Location: catalog.php');
             exit;
@@ -85,19 +119,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errorMsg = 'Slug already exists. Choose a different one.';
                 $errors[] = $errorMsg;
                 logCatalogAction("Edit failed for item ID={$id} ('{$title}') - duplicate slug '{$slug}'.");
+
+                sendMailpitNotification(
+                    'Catalog Item Edit Failed - Duplicate Slug',
+                    "Edit failed for item ID: $id\nTitle: $title\nSlug: $slug\nReason: Duplicate slug\nTime: " . date('Y-m-d H:i:s')
+                );
             } else {
                 $errorMsg = 'Database error: ' . $e->getMessage();
                 $errors[] = $errorMsg;
                 log_error("Database error during catalog-edit: " . $e->getMessage());
                 logCatalogAction("Database error while editing item ID={$id} ('{$title}'): " . $e->getMessage());
+
+                sendMailpitNotification(
+                    'Catalog Item Edit Failed - Database Error',
+                    "Database error while editing item ID: $id\nTitle: $title\nSlug: $slug\nError: {$e->getMessage()}\nTime: " . date('Y-m-d H:i:s')
+                );
             }
         }
     } else {
-        // ✅ Log validation failure
+        // ✅ Log + Email validation errors
         logCatalogAction("Catalog item edit failed for ID={$id} ('{$title}') due to validation errors: " . implode('; ', $errors));
+        sendMailpitNotification(
+            'Catalog Item Edit Failed - Validation Errors',
+            "Validation errors occurred while editing item:\nID: $id\nTitle: $title\nSlug: $slug\nErrors: " . implode('; ', $errors) . "\nTime: " . date('Y-m-d H:i:s')
+        );
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">

@@ -1,16 +1,60 @@
 <?php
 require_once __DIR__ . '/../app/config.php';
+require_once __DIR__ . '/../vendor/autoload.php'; // ✅ For PHPMailer
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+// ✅ Function to send Mailpit notification
+function sendMailpitNotification($subject, $body) {
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host = '127.0.0.1'; // Mailpit SMTP host
+        $mail->Port = 1025;        // Mailpit default port
+        $mail->SMTPAuth = false;
+
+        $mail->setFrom('no-reply@example.com', 'Catalog App');
+        $mail->addAddress('admin@example.com');
+
+        $mail->Subject = $subject;
+        $mail->Body = $body;
+        $mail->send();
+    } catch (Exception $e) {
+        error_log("Mailpit Error: {$mail->ErrorInfo}");
+    }
+}
+
+// ✅ Restore logic
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if ($id > 0) {
-    $stmt = $pdo->prepare("UPDATE catalog_items SET status = 'published' WHERE id = ?");
+    // Fetch item before restoring (for email details)
+    $stmt = $pdo->prepare("SELECT title, slug, status FROM catalog_items WHERE id = ?");
     $stmt->execute([$id]);
+    $item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($item) {
+        $stmt = $pdo->prepare("UPDATE catalog_items SET status = 'published', updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$id]);
+
+        // ✅ Send Mailpit email notification
+        $subject = "Catalog Item Restored - {$item['title']}";
+        $body = "A catalog item has been restored successfully:\n\n" .
+                "🆔 ID: {$id}\n" .
+                "📘 Title: {$item['title']}\n" .
+                "🔗 Slug: {$item['slug']}\n" .
+                "✅ New Status: Published\n" .
+                "⏰ Restored At: " . date('Y-m-d H:i:s');
+
+        sendMailpitNotification($subject, $body);
+    }
 }
 
 header('Location: catalog-archived.php');
 exit;
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">

@@ -1,6 +1,11 @@
 <?php
 session_start();
 require 'db.php'; // PDO connection
+require 'vendor/autoload.php'; // PHPMailer
+require 'app/logger.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 // CSRF token generation
 if (empty($_SESSION['csrf_token'])) {
@@ -10,6 +15,27 @@ if (empty($_SESSION['csrf_token'])) {
 $error = '';
 $inputName = '';
 $inputEmail = '';
+
+// Function to send email to Mailpit
+function sendMailpitNotification($subject, $body) {
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host = '127.0.0.1'; // Mailpit host
+        $mail->Port = 1025;        // Mailpit SMTP port
+        $mail->SMTPAuth = false;   // No auth needed for Mailpit
+
+        $mail->setFrom('no-reply@example.com', 'Your App');
+        $mail->addAddress('admin@example.com'); // Mailpit inbox
+
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+
+        $mail->send();
+    } catch (Exception $e) {
+        log_error("Mailer Error: {$mail->ErrorInfo}");
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
@@ -25,32 +51,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validation
     if ($inputName === '') {
         $error = 'Name is required.';
+        sendMailpitNotification('Registration Error', "Error: Name is empty.\nTime: ".date('Y-m-d H:i:s'));
     } elseif ($inputEmail === '' || !filter_var($inputEmail, FILTER_VALIDATE_EMAIL)) {
         $error = 'Valid email is required.';
+        sendMailpitNotification('Registration Error', "Error: Invalid email ($inputEmail).\nTime: ".date('Y-m-d H:i:s'));
     } elseif ($password === '') {
         $error = 'Password is required.';
+        sendMailpitNotification('Registration Error', "Error: Password empty for email: $inputEmail\nTime: ".date('Y-m-d H:i:s'));
     } elseif ($password !== $passwordConfirm) {
         $error = 'Passwords do not match.';
+        sendMailpitNotification('Registration Error', "Error: Password mismatch for email: $inputEmail\nTime: ".date('Y-m-d H:i:s'));
     } else {
-        // Check if email exists
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([$inputEmail]);
+        try {
+            // Check if email exists
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+            $stmt->execute([$inputEmail]);
 
-        if ($stmt->fetch()) {
-            $error = 'Email already registered.';
-        } else {
-            // Insert user
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$inputName, $inputEmail, $hash, $role]);
+            if ($stmt->fetch()) {
+                $error = 'Email already registered.';
+                sendMailpitNotification('Registration Error', "Error: Email already exists ($inputEmail)\nTime: ".date('Y-m-d H:i:s'));
+            } else {
+                // Insert user
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$inputName, $inputEmail, $hash, $role]);
 
-            $_SESSION['flash'] = '✅ Registration successful! Please login.';
-            header('Location: login.php');
-            exit;
+                $_SESSION['flash'] = '✅ Registration successful! Please login.';
+
+                // Send success email
+                sendMailpitNotification(
+                    'New Registration',
+                    "New user registered:\nName: $inputName\nEmail: $inputEmail\nRole: $role\nTime: ".date('Y-m-d H:i:s')
+                );
+
+                header('Location: login.php');
+                exit;
+            }
+        } catch (Exception $e) {
+            log_error("❌ DB error during registration for $inputEmail: " . $e->getMessage());
+            $error = 'An unexpected error occurred. Please try again.';
+            sendMailpitNotification(
+                'Registration DB Error',
+                "Database error during registration for $inputEmail\nError: ".$e->getMessage()."\nTime: ".date('Y-m-d H:i:s')
+            );
         }
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">

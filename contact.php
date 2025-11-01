@@ -46,53 +46,71 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['name'], $_POST['email
             die("Connection failed: " . $conn->connect_error);
         }
 
-        // Prepare and bind statement with ip included
+        // Insert lead into database
         $stmt = $conn->prepare("INSERT INTO leads (name, email, message, ip) VALUES (?, ?, ?, ?)");
         if ($stmt) {
             $stmt->bind_param("ssss", $name, $email, $message, $ip);
 
             if ($stmt->execute()) {
-                // Send email after successful DB insert
-                $mail = new PHPMailer(true);
+
+                // Prepare the email body once
+                $emailBody = "
+                    <h3>New Contact Form Submission</h3>
+                    <p><strong>Name:</strong> " . htmlspecialchars($name) . "</p>
+                    <p><strong>Email:</strong> " . htmlspecialchars($email) . "</p>
+                    <p><strong>Message:</strong><br>" . nl2br(htmlspecialchars($message)) . "</p>
+                    <p><strong>IP Address:</strong> {$ip}</p>
+                    <p><strong>Received at:</strong> " . date('Y-m-d H:i:s') . "</p>
+                ";
+
+                // ============ MAILPIT SEND ============
+                $mail1 = new PHPMailer(true);
                 try {
-                    // SMTP configuration
-                    $mail->isSMTP();
-                    $mail->Host       = 'smtp.gmail.com';
-                    $mail->SMTPAuth   = true;
-                    $mail->Username   = 'cstltest4@gmail.com'; // Use your Gmail email
-                    $mail->Password   = 'vwrs cubq qpqg wfcg';  // Use your app-specific password
-                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                    $mail->Port       = 587;
+                    $mail1->isSMTP();
+                    $mail1->Host = '127.0.0.1';
+                    $mail1->Port = 1025;
+                    $mail1->SMTPAuth = false;
+                    $mail1->SMTPSecure = false;
 
-                    // Recipients
-                    $mail->setFrom('cstltest4@gmail.com', 'Chandusoft Contact');
-                    $mail->addAddress('chaitanyareddy.bhimavarapu@chandusoft.com', 'Admin'); // Admin email address
-
-                    // Content
-                    $mail->isHTML(true);
-                    $mail->Subject = 'New Lead Submission';
-                    $mail->Body    = "<h3>New message from website contact form</h3>
-                        <p><strong>Name:</strong> " . htmlspecialchars($name) . "</p>
-                        <p><strong>Email:</strong> " . htmlspecialchars($email) . "</p>
-                        <p><strong>Message:</strong><br>" . nl2br(htmlspecialchars($message)) . "</p>
-                        <p><strong>IP Address:</strong> $ip</p>";
-
-                    if ($mail->send()) {
-                        echo "success";
-                    } else {
-                        echo "error";
-                    }
-
+                    $mail1->setFrom('no-reply@chandusoft.test', 'Chandusoft Contact Form');
+                    $mail1->addAddress('admin@chandusoft.test', 'Admin');
+                    $mail1->isHTML(true);
+                    $mail1->Subject = '📩 New Contact Form Submission (Local)';
+                    $mail1->Body = $emailBody;
+                    $mail1->AltBody = strip_tags($emailBody);
+                    $mail1->send();
                 } catch (Exception $e) {
-                    // Log mail error to file if sending fails
-                    file_put_contents(__DIR__ . '/storage/logs/mail-fail.log', "[" . date("Y-m-d H:i:s") . "] Mail error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
-                    echo "error";
+                    file_put_contents(__DIR__ . '/storage/logs/mailpit-error.log', "[" . date("Y-m-d H:i:s") . "] Mailpit error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
                 }
 
-                $stmt->close();
+                // ============ GMAIL SEND ============
+                $mail2 = new PHPMailer(true);
+                try {
+                    $mail2->isSMTP();
+                    $mail2->Host = 'smtp.gmail.com';
+                    $mail2->SMTPAuth = true;
+                    $mail2->Username = 'cstltest4@gmail.com'; // Your Gmail
+                    $mail2->Password = 'vwrs cubq qpqg wfcg';  // App password
+                    $mail2->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                    $mail2->Port = 587;
+
+                    $mail2->setFrom('cstltest4@gmail.com', 'Chandusoft Contact Form');
+                    $mail2->addAddress('chaitanyareddy.bhimavarapu@chandusoft.com', 'Admin');
+                    $mail2->isHTML(true);
+                    $mail2->Subject = '📩 New Contact Form Submission (Gmail)';
+                    $mail2->Body = $emailBody;
+                    $mail2->AltBody = strip_tags($emailBody);
+                    $mail2->send();
+                } catch (Exception $e) {
+                    file_put_contents(__DIR__ . '/storage/logs/gmail-error.log', "[" . date("Y-m-d H:i:s") . "] Gmail error: " . $e->getMessage() . PHP_EOL, FILE_APPEND);
+                }
+
+                echo "success";
             } else {
                 echo "error";
             }
+
+            $stmt->close();
         } else {
             echo "error";
         }
@@ -101,9 +119,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['name'], $_POST['email
     } else {
         echo "error";
     }
-    exit; // Prevent the rest of the HTML from being sent
+    exit;
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">

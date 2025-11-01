@@ -40,6 +40,7 @@ if (!empty($publishedPages)) {
         <a href="about.php" class="<?= (!$is_dynamic_page && $current_page == 'about.php') ? 'active' : '' ?>"><button><b>About</b></button></a>
         <a href="services.php" class="<?= (!$is_dynamic_page && $current_page == 'services.php') ? 'active' : '' ?>"><button><b>Services</b></button></a>
         <a href="contact.php" class="<?= (!$is_dynamic_page && $current_page == 'contact.php') ? 'active' : '' ?>"><button><b>Contact</b></button></a>
+        <a href="public/catalog.php" class="<?= (!$is_dynamic_page && $current_page == 'public/catalog.php') ? 'active' : '' ?>"><button><b>Public Catalog</b></button></a>
         <a href="register.php" class="<?= (!$is_dynamic_page && $current_page == 'register.php') ? 'active' : '' ?>"><button><b>Login/Register</b></button></a>
 
         <!-- Dynamically Generated Published Pages -->
