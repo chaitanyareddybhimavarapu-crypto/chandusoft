@@ -1,7 +1,13 @@
 <?php
 session_start();
+require_once __DIR__ . '/../app/security-init.php';
 require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../vendor/autoload.php';
+
+use Stripe\Stripe;
+use Stripe\Checkout\Session as StripeSession;
+
+$errors = [];
 
 // ✅ Redirect if cart empty
 if (empty($_SESSION['cart'])) {
@@ -9,44 +15,89 @@ if (empty($_SESSION['cart'])) {
     exit;
 }
 
-$errors = [];
-$success = false;
-
-// ✅ Load products from DB for total validation
-$ids = implode(',', array_map('intval', array_keys($_SESSION['cart'])));
-$stmt = $pdo->query("SELECT id, title, price FROM catalog_items WHERE id IN ($ids) AND status='published'");
+// ✅ Load products from DB
+$cartIds = array_keys($_SESSION['cart']);
+$placeholders = implode(',', array_fill(0, count($cartIds), '?'));
+$stmt = $pdo->prepare("SELECT id, title, price FROM catalog_items WHERE id IN ($placeholders)");
+$stmt->execute($cartIds);
 $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// ✅ Compute total (secure server-side)
+// ✅ Compute total server-side
 $total = 0;
 foreach ($products as $p) {
-    $qty = $_SESSION['cart'][$p['id']];
-    $total += $p['price'] * $qty;
+    $total += $p['price'] * $_SESSION['cart'][$p['id']];
 }
 
-// ✅ Handle form submission
+// ✅ Start a fresh order if requested
+if (isset($_GET['neworder'])) {
+    unset($_SESSION['order_id'], $_SESSION['order_ref'], $_SESSION['user_details']);
+    header("Location: checkout.php");
+    exit;
+}
+
+// ✅ Check for existing pending order to resume
+if (isset($_SESSION['order_ref'])) {
+    $stmt = $pdo->prepare("SELECT status, stripe_session_id FROM orders WHERE order_ref=? LIMIT 1");
+    $stmt->execute([$_SESSION['order_ref']]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($order && $order['status'] === 'pending') {
+
+        $resumeUrl = "checkout-stripe.php"; // fallback
+
+        if (!empty($order['stripe_session_id'])) {
+            try {
+                Stripe::setApiKey($stripeSecretKey);
+                $stripeSession = StripeSession::retrieve($order['stripe_session_id']);
+                $resumeUrl = $stripeSession->url; // official Stripe redirect
+            } catch (Exception $e) {
+                error_log("Stripe resume error: " . $e->getMessage());
+            }
+        }
+
+        echo "
+        <div style='background:#fff3cd;border:1px solid #ffeeba;padding:20px;
+        margin:20px auto;width:80%;max-width:500px;border-radius:8px;text-align:center'>
+            <h3>⚠️ Pending Payment Found</h3>
+            <p>You have an unpaid order. Complete it now?</p>
+            <a href='$resumeUrl' style='background:#28a745;color:#fff;padding:10px 20px;
+            border-radius:6px;text-decoration:none;'>Resume Payment</a>
+            <br><br>
+            <a href='checkout.php?neworder=1' style='font-size:13px;text-decoration:none;'>
+                Cancel and Create New Order
+            </a>
+        </div>";
+        exit;
+    }
+}
+
+// ✅ Handle checkout form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name    = trim($_POST['name'] ?? '');
-    $email   = trim($_POST['email'] ?? '');
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
     $address = trim($_POST['address'] ?? '');
-    $method  = $_POST['pay_method'] ?? ''; // paypal or stripe
+    $method = $_POST['pay_method'] ?? '';
 
-    // Basic validation
     if ($name === '') $errors[] = 'Name is required.';
-    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required.';
-    if (!in_array($method, ['paypal', 'stripe'])) $errors[] = 'Please select a payment method.';
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Valid email is required.';
+    if (!in_array($method, ['paypal', 'stripe'])) $errors[] = 'Choose a payment method.';
 
-    if (empty($errors)) {
+    if (!$errors) {
         try {
             $pdo->beginTransaction();
 
-            // ✅ Insert new order (status=pending)
-            $stmt = $pdo->prepare("
-    INSERT INTO orders (customer_name, customer_email, customer_address, total_amount, status, created_at)
-    VALUES (?, ?, ?, ?, 'pending', NOW())
-");
+            $_SESSION['user_details'] = compact('name', 'email', 'address');
 
-            $stmt->execute([$name, $email, $address, $total]);
+            // ✅ Generate unique order reference
+            $orderRef = 'ORD-' . strtoupper(uniqid());
+
+            // ✅ Insert order into DB
+            $stmt = $pdo->prepare("
+                INSERT INTO orders (customer_name, customer_email, customer_address,
+                    total_amount, status, created_at, payment_gateway, order_ref)
+                VALUES (?, ?, ?, ?, 'pending', NOW(), ?, ?)
+            ");
+            $stmt->execute([$name, $email, $address, $total, $method, $orderRef]);
             $orderId = $pdo->lastInsertId();
 
             // ✅ Insert order items
@@ -55,89 +106,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 VALUES (?, ?, ?, ?)
             ");
             foreach ($products as $p) {
-                $pid = $p['id'];
-                $qty = $_SESSION['cart'][$pid];
-                $price = $p['price'];
-                $itemStmt->execute([$orderId, $pid, $qty, $price]);
+                $itemStmt->execute([
+                    $orderId,
+                    $p['id'],
+                    $_SESSION['cart'][$p['id']],
+                    $p['price']
+                ]);
             }
 
             $pdo->commit();
 
-            // ✅ Save order ID for payment
             $_SESSION['order_id'] = $orderId;
+            $_SESSION['order_ref'] = $orderRef;
 
-            // Redirect based on chosen payment method
-            if ($method === 'stripe') {
-                header("Location: checkout-stripe.php");
-            } else {
-                header("Location: checkout-paypal.php");
-            }
+            // ✅ Redirect to payment gateway
+            header("Location: checkout-" . $method . ".php");
             exit;
 
         } catch (Exception $e) {
             $pdo->rollBack();
-            $errors[] = "Order could not be created: " . $e->getMessage();
+            $errors[] = "Order Creation Failed: " . $e->getMessage();
         }
     }
 }
 ?>
+
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Checkout</title>
 <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 40px; }
-    h1 { text-align: center; color: #0056b3; }
-    form { width: 80%; max-width: 500px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 8px;
-           box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    label { display: block; font-weight: bold; margin-top: 10px; }
-    input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-    button { background: #007bff; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; margin-top: 15px; width: 100%; }
-    button:hover { background: #0056b3; }
-    .error-list { color: red; list-style: none; padding: 0; }
-    .total { text-align: center; font-size: 18px; margin-top: 20px; }
-    .pay-buttons { display: flex; gap: 10px; margin-top: 15px; }
-    .pay-buttons button { flex: 1; }
-    .stripe-btn { background: #6772e5; }
-    .stripe-btn:hover { background: #5469d4; }
-    .paypal-btn { background: #ffc439; color: #111; }
-    .paypal-btn:hover { background: #ffb400; }
+body { font-family: Arial,sans-serif;background:#f5f5f5;padding:40px; }
+h1 { text-align:center;color:#007bff; }
+form { width:80%;max-width:480px;margin:20px auto;background:#fff;
+       padding:20px;border-radius:10px;box-shadow:0 3px 8px rgba(0,0,0,.1);}
+input, textarea { width:100%;padding:10px;margin-top:8px;border:1px solid #ccc;
+                  border-radius:4px; }
+button {margin-top:15px;width:100%;padding:12px;border:none;border-radius:5px;
+        color:#fff;font-size:16px;cursor:pointer;}
+.stripe-btn {background:#6772e5;}
+.paypal-btn {background:#ffc439;color:#111;}
+.error-list {color:#d00;text-align:center;}
 </style>
 </head>
 <body>
 
-<h1>🧾 Checkout</h1>
+<h1>🛒 Checkout</h1>
 
 <?php if ($errors): ?>
-    <ul class="error-list">
-        <?php foreach ($errors as $err): ?>
-            <li><?= htmlspecialchars($err) ?></li>
-        <?php endforeach; ?>
-    </ul>
+<ul class="error-list">
+    <?php foreach($errors as $e): ?>
+    <li><?= htmlspecialchars($e) ?></li>
+    <?php endforeach; ?>
+</ul>
 <?php endif; ?>
 
-<div class="total">
-    <p><strong>Order Total:</strong> $<?= number_format($total, 2) ?></p>
+<div style="text-align:center;font-size:18px;margin-bottom:12px;">
+    <strong>Total: $<?= number_format($total,2) ?></strong>
 </div>
 
 <form method="post" action="">
     <label>Name *</label>
-    <input type="text" name="name" value="<?= htmlspecialchars($_POST['name'] ?? '') ?>" required>
+    <input type="text" name="name" required>
 
     <label>Email *</label>
-    <input type="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
+    <input type="email" name="email" required>
 
-    <label>Address (optional)</label>
-    <textarea name="address" rows="3"><?= htmlspecialchars($_POST['address'] ?? '') ?></textarea>
+    <label>Address</label>
+    <textarea name="address" rows="3"></textarea>
 
-    <div class="pay-buttons">
-        <button type="submit" name="pay_method" value="paypal" class="paypal-btn">💰 Pay with PayPal</button>
-        <button type="submit" name="pay_method" value="stripe" class="stripe-btn">💳 Pay with Stripe</button>
-    </div>
+    <button type="submit" name="pay_method" value="stripe" class="stripe-btn">💳 Pay with Stripe</button>
+    <button type="submit" name="pay_method" value="paypal" class="paypal-btn">💰 Pay with PayPal</button>
 </form>
 
-<p style="text-align:center;"><a href="cart.php">← Back to Cart</a></p>
+<p style="text-align:center;">
+    <a href="cart.php">← Back to Cart</a>
+</p>
 
 </body>
 </html>

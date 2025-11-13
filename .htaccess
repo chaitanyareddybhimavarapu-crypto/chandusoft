@@ -1,35 +1,24 @@
 # Enable the Rewrite Engine
 RewriteEngine On
-
-# Ensure the rules apply only when mod_rewrite is enabled
 RewriteBase /
 
-# 1. Redirect www to non-www (optional, if you want a consistent URL structure)
-# Uncomment if you want to redirect from www to non-www
-# RewriteCond %{HTTP_HOST} ^www\.chandusoft\.test$ [NC]
-# RewriteRule ^(.*)$ http://chandusoft.test/$1 [L,R=301]
+# ✅ Force Redirect HTTP ➝ HTTPS (safe for ngrok/proxies)
+# Only redirect if BOTH:
+#   1. HTTPS is off
+#   2. X-Forwarded-Proto (used by proxies/ngrok) is not https
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# 2. Remove "index.php?page=" from URLs
+# ✅ Allow Stripe Webhook & other real PHP files to run directly
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond %{REQUEST_URI} \.php$ [NC]
+RewriteRule ^ - [L]
+
+# ✅ Remove "index.php?page=" from URLs
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([a-zA-Z0-9_-]+)$ index.php?page=$1 [QSA,L]
 
-# 3. Handle trailing slashes (optional)
-# Uncomment the next two lines if you want to remove trailing slashes
-# RewriteCond %{REQUEST_URI} ^/(.*)/$
-# RewriteRule ^(.*)/$ /$1 [L,R=301]
-
-# 4. Redirect HTTP to HTTPS (if you want to enforce HTTPS)
-# Uncomment if you want to redirect all HTTP requests to HTTPS
-# RewriteCond %{HTTPS} off
-# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
-# 5. Handling 404 page (if the page doesn't exist)
-# This will send any requests that don’t match a valid file or directory to your custom 404 page
+# ✅ Custom 404 Page
 ErrorDocument 404 /404.php
-
-# Optional: Compress text and HTML files for faster loading
-# You can comment these lines if you don't want to enable compression
-# AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css application/javascript application/x-javascript
-# ExpiresActive On
-# ExpiresDefault "access plus 1 year"

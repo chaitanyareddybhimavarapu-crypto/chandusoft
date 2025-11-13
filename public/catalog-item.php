@@ -66,8 +66,7 @@ if (!$item) {
     die('Product not found or not published.');
 }
 
-$TURNSTILE_SITE = env('TURNSTILE_SITE');
-$TURNSTILE_SECRET = env('TURNSTILE_SECRET');
+
 
 // ✅ CSRF token
 if (empty($_SESSION['_csrf'])) {

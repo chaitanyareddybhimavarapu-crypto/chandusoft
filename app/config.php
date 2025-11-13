@@ -1,43 +1,56 @@
 <?php
 // app/config.php
-error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE); // Suppress deprecated and notice warnings
-
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
 require_once __DIR__ . '/../vendor/autoload.php';
-
-// Load environment variables or define directly here
-$DB_HOST = getenv('DB_HOST') ?: 'localhost';
-$DB_NAME = getenv('DB_NAME') ?: 'chandusoft';
-$DB_USER = getenv('DB_USER') ?: 'root';
-$DB_PASS = getenv('DB_PASS') ?: '';
-
-// PayPal API credentials (sandbox)
-$PAYPAL_CLIENT_ID = getenv('PAYPAL_CLIENT_ID') ?: 'ARM375iNx3xH7GY9tDWGqPbIoASrXuLrzMPneG9KnV_1preXUCf2tdIeKF7Alqw3DuhremaHrr5x5JXK'; // Replace with your sandbox client ID
-$PAYPAL_SECRET = getenv('PAYPAL_SECRET') ?: 'EHXvqbutdXCuFsl6fPkSPSiOqV-5zBpFGAESii_ACZ8DLEumi8auz8jbJWhbQNnIQ-mhuw73noHbCUnl'; // Replace with your sandbox secret
-
-// Initialize PDO connection for the database
+ 
+use Dotenv\Dotenv;
+use PayPal\Rest\ApiContext;
+use PayPal\Auth\OAuthTokenCredential;
+ 
+// ✅ Load environment variables
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
+ 
+// ✅ Database connection
+$DB_HOST = $_ENV['DB_HOST'] ?? 'localhost';
+$DB_NAME = $_ENV['DB_NAME'] ?? 'chandusoft';
+$DB_USER = $_ENV['DB_USER'] ?? 'root';
+$DB_PASS = $_ENV['DB_PASS'] ?? '';
+ 
 try {
     $pdo = new PDO("mysql:host=$DB_HOST;dbname=$DB_NAME;charset=utf8mb4", $DB_USER, $DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
-
-// PayPal API context setup (for PayPal integration)
-use PayPal\Rest\ApiContext;
-use PayPal\Auth\OAuthTokenCredential;
-
-// Initialize the PayPal API context (for API calls)
+ 
+// ✅ PayPal configuration
+$PAYPAL_CLIENT_ID = $_ENV['PAYPAL_CLIENT_ID'] ?? '';
+$PAYPAL_SECRET    = $_ENV['PAYPAL_SECRET'] ?? '';
+ 
 $paypal = new ApiContext(
-    new OAuthTokenCredential(
-        $PAYPAL_CLIENT_ID,  // PayPal Client ID (sandbox)
-        $PAYPAL_SECRET      // PayPal Secret (sandbox)
-    )
+    new OAuthTokenCredential($PAYPAL_CLIENT_ID, $PAYPAL_SECRET)
 );
 $paypal->setConfig([
-    'mode' => 'sandbox',  // Ensure you are using sandbox for testing
+    'mode' => ($_ENV['APP_ENV'] ?? 'local') === 'production' ? 'live' : 'sandbox',
     'log.LogEnabled' => true,
-    'log.FileName' => __DIR__ . '/paypal.log',  // Path to log PayPal API requests
+    'log.FileName' => __DIR__ . '/paypal.log',
     'log.LogLevel' => 'DEBUG'
 ]);
-
-?>
+ 
+// ✅ Stripe configuration
+$stripeSecretKey = $_ENV['STRIPE_SECRET_KEY'] ?? '';
+$stripePublishableKey = $_ENV['STRIPE_PUBLISHABLE_KEY'] ?? '';
+$stripeWebhookSecret = $_ENV['STRIPE_WEBHOOK_SECRET'] ?? ''; // ✅ add this line
+ 
+// ✅ Mail configuration (example)
+$mailConfig = [
+    'host' => $_ENV['MAIL_HOST'] ?? 'smtp.example.com',
+    'port' => $_ENV['MAIL_PORT'] ?? 587,
+    'user' => $_ENV['MAIL_USER'] ?? '',
+    'pass' => $_ENV['MAIL_PASS'] ?? ''
+];
+ 
+// ✅ Cloudflare Turnstile
+$TURNSTILE_SITE   = $_ENV['TURNSTILE_SITE'] ?? '';
+$TURNSTILE_SECRET = $_ENV['TURNSTILE_SECRET'] ?? '';

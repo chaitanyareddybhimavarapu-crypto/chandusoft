@@ -23,9 +23,12 @@ $sql = "FROM orders o WHERE 1=1";
 $params = [];
 
 if ($search !== '') {
-    $sql .= " AND (o.customer_email LIKE :search OR o.customer_name LIKE :search)";
+    $sql .= " AND (o.customer_email LIKE :search 
+               OR o.customer_name LIKE :search 
+               OR o.order_ref LIKE :search)";
     $params[':search'] = '%' . $search . '%';
 }
+
 if ($statusFilter !== '') {
     $sql .= " AND o.status = :status";
     $params[':status'] = $statusFilter;
@@ -44,11 +47,13 @@ $totalPages = ceil($totalOrders / $limit);
 // ==========================================================
 $sqlOrders = "
     SELECT o.id, o.customer_name, o.customer_email,
-           o.total_amount, o.status, o.created_at
+           o.total_amount, o.status, o.created_at,
+           o.payment_gateway, o.order_ref  -- Make sure these columns are selected
     $sql
     ORDER BY o.created_at DESC
     LIMIT :limit OFFSET :offset
 ";
+
 $stmt = $pdo->prepare($sqlOrders);
 
 foreach ($params as $key => $val) {
@@ -62,7 +67,7 @@ $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // ==========================================================
 // 🧮 Status options
 // ==========================================================
-$statuses = ['pending', 'paid', 'fulfilled', 'cancelled'];
+$statuses = ['pending', 'paid', 'fulfilled', 'cancelled', 'failed'];
 ?>
 
 <!DOCTYPE html>
@@ -101,6 +106,7 @@ $statuses = ['pending', 'paid', 'fulfilled', 'cancelled'];
         .badge.paid { background: #5cb85c; }
         .badge.fulfilled { background: #0275d8; }
         .badge.cancelled { background: #999; }
+        .badge.failed { background: #f50808ff; }
 
         /* New Style for the View button */
         .view-btn {
@@ -145,6 +151,8 @@ $statuses = ['pending', 'paid', 'fulfilled', 'cancelled'];
             <th>Total Amount</th>
             <th>Status</th>
             <th>Order Date</th>
+            <th>Payment Gateway</th>  <!-- Added a column for Payment Gateway -->
+            <th>Order Reference</th>  <!-- Added a column for Order Reference -->
             <th>Action</th> <!-- Added a new column for the view button -->
         </tr>
     </thead>
@@ -159,15 +167,17 @@ $statuses = ['pending', 'paid', 'fulfilled', 'cancelled'];
                         <?= ucfirst($order['status']) ?>
                     </span></td>
                     <td><?= htmlspecialchars($order['created_at']) ?></td>
-                    <!-- Added "View" button for each order -->
+                    <td><?= htmlspecialchars($order['payment_gateway']) ?></td> <!-- Display payment_gateway -->
+                    <td><?= htmlspecialchars($order['order_ref']) ?></td> <!-- Display order_ref -->
                     <td><a href="order-details.php?id=<?= $order['id'] ?>" class="view-btn">View</a></td>
                 </tr>
             <?php endforeach; ?>
         <?php else: ?>
-            <tr><td colspan="6">No orders found.</td></tr>
+            <tr><td colspan="8">No orders found.</td></tr> <!-- Adjusted colspan for new columns -->
         <?php endif; ?>
     </tbody>
 </table>
+
 
 <div class="pagination">
     <?php if ($totalPages > 1): ?>
@@ -181,4 +191,4 @@ $statuses = ['pending', 'paid', 'fulfilled', 'cancelled'];
 </div>
 
 </body>
-</html>
+</html> 
