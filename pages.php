@@ -96,6 +96,12 @@ $pages = $stmt->fetchAll(PDO::FETCH_ASSOC);
       margin-left: 15px;
       text-decoration: none;
     }
+    .navbar a.active {
+    color: #3498db; /* Highlight color */
+    font-weight: bold; /* Make it bold */
+    text-decoration: underline; /* Add underline */
+}
+
 
     .navbar a:hover {
       text-decoration: underline;
@@ -235,24 +241,25 @@ $pages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
 
 <div class="navbar">
-  <div><strong>Chandusoft Admin</strong></div>
-  <div>
-    <span>Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
-    <a href="dashboard.php">Dashboard</a>
-    
-    <!-- Dynamic catalog link based on user role -->
-    <?php if ($role === 'admin'): ?>
-        <a href="admin/catalog.php">Admin Catalog</a>
-          <a href="public/catalog.php">Public Catalog</a>
-    <?php elseif ($role === 'editor'): ?>
-        <a href="public/catalog.php">Public Catalog</a>
-    <?php endif; ?>
+    <div><strong>Chandusoft Admin</strong></div>
+    <div>
+        <span>Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
+        <a href="dashboard.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'dashboard.php') ? 'active' : '' ?>">Dashboard</a>
 
-    <a href="admin-leads.php">Leads</a>
-    <a href="pages.php">Pages</a>
-    <a href="logout.php">Logout</a>
-  </div>
+        <!-- Dynamic catalog link based on user role -->
+        <?php if ($role === 'admin'): ?>
+            <a href="admin/catalog.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'admin/catalog.php') ? 'active' : '' ?>">Admin Catalog</a>
+            <a href="public/catalog.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'public/catalog.php') ? 'active' : '' ?>">Public Catalog</a>
+        <?php elseif ($role === 'editor'): ?>
+            <a href="public/catalog.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'public/catalog.php') ? 'active' : '' ?>">Public Catalog</a>
+        <?php endif; ?>
+
+        <a href="admin-leads.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'admin-leads.php') ? 'active' : '' ?>">Leads</a>
+        <a href="pages.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'pages.php') ? 'active' : '' ?>">Pages</a>
+        <a href="logout.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'logout.php') ? 'active' : '' ?>">Logout</a>
+    </div>
 </div>
+
 
 
 <div class="container">

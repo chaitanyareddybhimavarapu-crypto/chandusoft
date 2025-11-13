@@ -54,6 +54,12 @@ $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
             text-decoration: none;
             font-weight: bold;
         }
+        .navbar a.active {
+    color: #2980b9; /* Highlight color */
+    font-weight: bold; /* Make it bold */
+    text-decoration: underline; /* Add underline */
+}
+
 
         .container {
             max-width: 1100px;
@@ -121,21 +127,22 @@ $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="logo">Chandusoft Admin</div>
     <div class="menu">
         <span class="welcome">Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
-        <a href="dashboard.php">Dashboard</a>
+        <a href="dashboard.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'dashboard.php') ? 'active' : '' ?>">Dashboard</a>
 
         <!-- Dynamic catalog link based on user role -->
         <?php if ($role === 'admin'): ?>
-            <a href="admin/catalog.php">Admin Catalog</a>
-            <a href="public/catalog.php">Public Catalog</a>
+            <a href="admin/catalog.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'admin/catalog.php') ? 'active' : '' ?>">Admin Catalog</a>
+            <a href="public/catalog.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'public/catalog.php') ? 'active' : '' ?>">Public Catalog</a>
         <?php elseif ($role === 'editor'): ?>
-            <a href="public/catalog.php">Public Catalog</a>
+            <a href="public/catalog.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'public/catalog.php') ? 'active' : '' ?>">Public Catalog</a>
         <?php endif; ?>
 
-        <a href="admin-leads.php">Leads</a>
-        <a href="pages.php">Pages</a>
-        <a href="logout.php">Logout</a>
+        <a href="admin-leads.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'admin-leads.php') ? 'active' : '' ?>">Leads</a>
+        <a href="pages.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'pages.php') ? 'active' : '' ?>">Pages</a>
+        <a href="logout.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'logout.php') ? 'active' : '' ?>">Logout</a>
     </div>
 </div>
+
 
 <div class="container">
     <h2>Leads</h2>
