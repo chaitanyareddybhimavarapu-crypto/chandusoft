@@ -100,102 +100,120 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login - Chandusoft</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="styles.css" />
+
   <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6fa;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
+    /* CLEAN PROFESSIONAL LOGIN CARD STYLING */
 
-    .login-card {
-      background: #fff;
-      padding: 2rem;
-      width: 100%;
-      max-width: 360px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-    }
+body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background-color: #f4f6fa;
+}
 
-    h2 {
-      text-align: center;
-      margin-bottom: 1.5rem;
-      font-size: 1.5rem;
-      color: #333;
-    }
+/* LOGIN CARD */
+main {
+    width: 100%;
+    max-width: 420px;
+    margin: 60px auto;
+    background: #fff;
+    padding: 28px 32px;
+    border-radius: 12px;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+    text-align: left; /* 👈 THIS FIXES LEFT ALIGN */
+}
 
-    .form-group {
-      margin-bottom: 1.2rem;
-    }
+main h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #007bff;
+    font-size: 1.8rem;
+}
 
-    label {
-      display: block;
-      margin-bottom: 0.4rem;
-      color: #444;
-      font-weight: 500;
-    }
+/* LABEL LEFT SIDE ALWAYS */
+label {
+    font-weight: 600;
+    margin-top: 14px;
+    display: block;
+    color: #333;
+    text-align: left;  /* 👈 FORCES LEFT SIDE */
+}
 
-    input[type="email"],
-    input[type="password"] {
-      width: 100%;
-      padding: 0.6rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
+/* INPUT LEFT WITH EQUAL SPACING */
+input {
+    width: 100%;
+    padding: 11px;
+    margin-top: 6px;
+    border: 1px solid #c8cdd3;
+    border-radius: 6px;
+    background: #fafafa;
+    font-size: 1rem;
+    transition: 0.25s;
+}
 
-    .login-btn {
-      width: 100%;
-      background-color: #007bff;
-      color: white;
-      padding: 0.7rem;
-      border: none;
-      border-radius: 4px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
+input:focus {
+    border-color: #007bff;
+    background: #fff;
+    box-shadow: 0 0 6px rgba(0,123,255,0.25);
+    outline: none;
+}
 
-    .login-btn:hover {
-      background-color: #0056b3;
-    }
+/* BUTTON */
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 22px;
+    background: #007bff;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+}
 
-    .error {
-      color: red;
-      margin-bottom: 1rem;
-      text-align: center;
-    }
-    .register-link {
-      margin-top: 1rem;
-      text-align: center;
-    }
+.login-btn:hover {
+    background: #0056b3;
+}
 
-    .register-link a {
-      color: #28a745;
-      text-decoration: none;
-      font-weight: 500;
-    }
+.error {
+    text-align: center;
+    color: #ff3d3d;
+    margin: 10px 0;
+    font-weight: 600;
+}
 
-    .register-link a:hover {
-      text-decoration: underline;
-    }
+.register-link {
+    text-align: center;
+    margin-top: 18px;
+}
+
+.register-link a {
+    color: #28a745;
+    text-decoration: none;
+    font-weight: 600;
+}
 
   </style>
 </head>
+
 <body>
 
-  <div class="login-card">
-    <h2>Admin Login</h2>
+  <!-- Header -->
+  <?php include "header.php"; ?>
+
+  <main>
+    <h2>Login</h2>
 
     <?php if ($error): ?>
       <p class="error"><?= htmlspecialchars($error) ?></p>
@@ -204,15 +222,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form method="post" action="login.php" autocomplete="off">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" name="email" id="email" value="<?= htmlspecialchars($inputEmail) ?>" required autocomplete="email">
-      </div>
+      <label for="email">Email Address</label>
+      <input type="email" name="email" id="email" required value="<?= htmlspecialchars($inputEmail) ?>">
 
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" name="password" id="password" required autocomplete="current-password">
-      </div>
+      <label for="password">Password</label>
+      <input type="password" name="password" id="password" required>
 
       <button type="submit" class="login-btn">Login</button>
     </form>
@@ -220,8 +234,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="register-link">
       <p>Don't have an account? <a href="register.php">Register here</a>.</p>
     </div>
+  </main>
 
-  </div>
+  <!-- Footer -->
+  <?php include "footer.php"; ?>
 
 </body>
 </html>

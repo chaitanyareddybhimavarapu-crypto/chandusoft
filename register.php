@@ -98,130 +98,158 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Register</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Register - Chandusoft</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+  <link rel="stylesheet" href="styles.css">
+
   <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #f4f6fa;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
+body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background-color: #f4f6fa;
+}
 
-    .register-card {
-      background: #fff;
-      padding: 2rem;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-    }
+/* CENTER CONTAINER */
+main {
+    width: 100%;
+    max-width: 450px;
+    margin: 60px auto;
+    background: #ffffff;
+    padding: 32px 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    text-align: left;  /* 👈 THIS MAKES EVERYTHING LEFT SIDE */
+}
 
-    h2 {
-      text-align: center;
-      margin-bottom: 1.5rem;
-      font-size: 1.5rem;
-      color: #333;
-    }
+/* TITLE */
+main h2 {
+    text-align: center;
+    font-size: 1.8rem;
+    color: #007bff;
+    font-weight: 600;
+    margin-bottom: 22px;
+}
 
-    .form-group {
-      margin-bottom: 1rem;
-    }
+/* LABELS (full left alignment) */
+label {
+    font-weight: 600;
+    margin-top: 18px;
+    display: block;
+    color: #222;
+    text-align: left; /* 👈 Forcing left alignment */
+    font-size: 0.95rem;
+}
 
-    label {
-      display: block;
-      margin-bottom: 0.4rem;
-      color: #444;
-      font-weight: 500;
-    }
+/* INPUT FIELDS */
+input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 6px;
+    border: 1px solid #cfd4da;
+    border-radius: 6px;
+    font-size: 1rem;
+    background-color: #fafafa;
+    transition: 0.25s;
+}
 
-    input[type="text"],
-    input[type="email"],
-    input[type="password"] {
-      width: 100%;
-      padding: 0.6rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
+input:focus {
+    border-color: #007bff;
+    background: #fff;
+    box-shadow: 0 0 6px rgba(0,123,255,0.25);
+    outline: none;
+}
 
-    .register-btn {
-      width: 100%;
-      background-color: #28a745;
-      color: white;
-      padding: 0.7rem;
-      border: none;
-      border-radius: 4px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
+/* REGISTER BUTTON */
+.register-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 22px;
+    border: none;
+    background-color: #28a745;
+    color: white;
+    font-size: 1.1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s;
+}
 
-    .register-btn:hover {
-      background-color: #218838;
-    }
+.register-btn:hover {
+    background-color: #218838;
+    box-shadow: 0 4px 10px rgba(40,167,69,0.2);
+}
 
-    .error {
-      color: red;
-      margin-bottom: 1rem;
-      text-align: center;
-    }
+/* ERROR MESSAGE */
+.error {
+    color: #ff3030;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: -10px;
+    font-weight: 600;
+}
 
-    .login-link {
-      margin-top: 1rem;
-      text-align: center;
-    }
+/* LOGIN LINK SECTION */
+.login-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.95rem;
+}
 
-    .login-link a {
-      color: #007bff;
-      text-decoration: none;
-    }
+.login-link a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 600;
+}
 
-    .login-link a:hover {
-      text-decoration: underline;
+.login-link a:hover {
+    text-decoration: underline;
+}
+
+/* MOBILE VIEW */
+@media (max-width: 480px) {
+    main {
+        margin: 25px;
+        padding: 22px;
     }
-  </style>
+}
+
+
+</style>
+
 </head>
+
 <body>
 
-  <div class="register-card">
-    <h2>Register</h2>
+  <!-- Header -->
+  <?php include "header.php"; ?>
+
+  <main>
+    <h2>Create Your Account</h2>
 
     <?php if ($error): ?>
       <p class="error"><?= htmlspecialchars($error) ?></p>
     <?php endif; ?>
 
-    <form method="post" action="register.php" autocomplete="off">
+    <form method="post" action="register.php">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
-      <div class="form-group">
-        <label for="name">Full Name</label>
-        <input type="text" name="name" id="name" value="<?= htmlspecialchars($inputName) ?>" required>
-      </div>
+      <label for="name">Full Name</label>
+      <input type="text" name="name" id="name" required value="<?= htmlspecialchars($inputName) ?>">
 
-      <div class="form-group">
-        <label for="email">Email Address</label>
-        <input type="email" name="email" id="email" value="<?= htmlspecialchars($inputEmail) ?>" required autocomplete="email">
-      </div>
+      <label for="email">Email Address</label>
+      <input type="email" name="email" id="email" required value="<?= htmlspecialchars($inputEmail) ?>">
 
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" name="password" id="password" required autocomplete="new-password">
-      </div>
+      <label for="password">Password</label>
+      <input type="password" name="password" id="password" required>
 
-      <div class="form-group">
-        <label for="password_confirm">Confirm Password</label>
-        <input type="password" name="password_confirm" id="password_confirm" required autocomplete="new-password">
-      </div>
+      <label for="password_confirm">Confirm Password</label>
+      <input type="password" name="password_confirm" id="password_confirm" required>
 
       <button type="submit" class="register-btn">Register</button>
     </form>
@@ -229,7 +257,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-link">
       <p>Already have an account? <a href="login.php">Login here</a>.</p>
     </div>
-  </div>
+  </main>
+
+  <!-- Footer -->
+  <?php include "footer.php"; ?>
 
 </body>
 </html>

@@ -1,4 +1,18 @@
 <?php
+// Start session to fetch session variables
+session_start();
+
+// Make sure the user is logged in and the role is set
+if (!isset($_SESSION['user'])) {
+    // If the user is not logged in, redirect them to the login page
+    header('Location: login.php');
+    exit;
+}
+
+// Fetch the role from session
+$user = $_SESSION['user'];
+$role = $user['role'] ?? 'user';  // Default to 'user' if role is not set
+
 require_once __DIR__ . '/../app/config.php';
 
 // Pagination settings
@@ -50,6 +64,33 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8" />
     <title>Admin Catalog - List</title>
     <style>
+        /* Navbar CSS */
+        .navbar {
+            background-color: #2c3e50;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        .navbar a {
+            color: white;
+            margin-left: 15px;
+            text-decoration: none;
+        }
+        .navbar a.active {
+    color: #007bff;  /* Blue color */
+    text-decoration: underline;  /* Underline the active link */
+    font-weight: bold;  /* Optional: Makes the active link bold */
+}
+
+
+
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+
         /* Global styles */
         body {
             font-family: 'Arial', sans-serif;
@@ -204,6 +245,28 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </style>
 </head>
 <body>
+
+    <div class="navbar">
+    <div><strong>Chandusoft Admin</strong></div>
+    <div>
+        <span>Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
+        <a href="/dashboard.php" class="<?= basename($_SERVER['PHP_SELF']) === 'dashboard.php' ? 'active' : '' ?>">Dashboard</a>
+
+        <?php if ($role === 'admin'): ?>
+            <a href="/admin/catalog.php" class="<?= basename($_SERVER['PHP_SELF']) === 'catalog.php' && strpos($_SERVER['REQUEST_URI'], '/admin/') !== false ? 'active' : '' ?>">Admin Catalog</a>
+            <a href="/public/catalog.php" class="<?= basename($_SERVER['PHP_SELF']) === 'catalog.php' && strpos($_SERVER['REQUEST_URI'], '/public/') !== false ? 'active' : '' ?>">Public Catalog</a>
+            <a href="/admin/orders.php" class="<?= basename($_SERVER['PHP_SELF']) === 'orders.php' ? 'active' : '' ?>">Orders</a>
+        <?php elseif ($role === 'editor'): ?>
+            <a href="/public/catalog.php" class="<?= basename($_SERVER['PHP_SELF']) === 'catalog.php' && strpos($_SERVER['REQUEST_URI'], '/public/') !== false ? 'active' : '' ?>">Public Catalog</a>
+        <?php endif; ?>
+
+        <a href="/admin-leads.php" class="<?= basename($_SERVER['PHP_SELF']) === 'admin-leads.php' ? 'active' : '' ?>">Leads</a>
+        <a href="/pages.php" class="<?= basename($_SERVER['PHP_SELF']) === 'pages.php' ? 'active' : '' ?>">Pages</a>
+        <a href="/logout.php" class="<?= basename($_SERVER['PHP_SELF']) === 'logout.php' ? 'active' : '' ?>">Logout</a>
+    </div>
+</div>
+
+
 
     <div class="container">
         <h1>Catalog Items</h1>

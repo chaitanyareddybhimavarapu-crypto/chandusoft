@@ -241,7 +241,8 @@ $pages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
 
 <div class="navbar">
-    <div><strong>Chandusoft Admin</strong></div>
+    <div><strong>Chandusoft <?= ucfirst($role) ?></strong></div>
+
     <div>
         <span>Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
         <a href="dashboard.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'dashboard.php') ? 'active' : '' ?>">Dashboard</a>

@@ -124,7 +124,8 @@ $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
 
 <div class="navbar">
-    <div class="logo">Chandusoft Admin</div>
+    <div class="logo">Chandusoft <?= ucfirst($role) ?></div>
+
     <div class="menu">
         <span class="welcome">Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
         <a href="dashboard.php" class="<?= (basename($_SERVER['PHP_SELF']) == 'dashboard.php') ? 'active' : '' ?>">Dashboard</a>

@@ -1,24 +1,34 @@
 <?php
+session_start();
+
+// Ensure user logged in
+if (!isset($_SESSION['user'])) {
+    header('Location: login.php');
+    exit;
+}
+
+// Fetch role from session
+$user = $_SESSION['user'];
+$role = $user['role'] ?? 'user'; // default role
+
 require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/upload.php';
 require_once __DIR__ . '/../app/logger.php';
-require_once __DIR__ . '/../vendor/autoload.php'; // ✅ For PHPMailer
+require_once __DIR__ . '/../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// --- Mailpit Email Function ---
+// Mailpit Function
 function sendMailpitNotification($subject, $body) {
     $mail = new PHPMailer(true);
     try {
         $mail->isSMTP();
-        $mail->Host = '127.0.0.1'; // Mailpit host
-        $mail->Port = 1025;        // Mailpit SMTP port
-        $mail->SMTPAuth = false;   // No authentication for local Mailpit
-
+        $mail->Host = '127.0.0.1';
+        $mail->Port = 1025;
+        $mail->SMTPAuth = false;
         $mail->setFrom('no-reply@example.com', 'Catalog App');
-        $mail->addAddress('admin@example.com'); // Mailpit inbox
-
+        $mail->addAddress('admin@example.com');
         $mail->Subject = $subject;
         $mail->Body    = $body;
         $mail->send();
@@ -27,19 +37,15 @@ function sendMailpitNotification($subject, $body) {
     }
 }
 
+// LOAD ITEM
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-if ($id <= 0) {
-    die('Invalid item ID.');
-}
+if ($id <= 0) die('Invalid item ID.');
 
-// Fetch existing item
 $stmt = $pdo->prepare("SELECT * FROM catalog_items WHERE id = ?");
 $stmt->execute([$id]);
 $item = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$item) {
-    die('Item not found.');
-}
+if (!$item) die('Item not found.');
 
 $errors = [];
 $title = $item['title'];
@@ -49,6 +55,7 @@ $short_desc = $item['short_desc'];
 $status = $item['status'];
 $currentImage = $item['image_path'];
 
+// FORM SUBMIT
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $slug = trim($_POST['slug'] ?? '');
@@ -56,47 +63,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $short_desc = trim($_POST['short_desc'] ?? '');
     $status = $_POST['status'] ?? 'published';
 
-    // --- VALIDATION ---
-    if ($title === '') {
-        $errors[] = 'Title is required.';
-    }
-    if ($slug === '') {
-        $errors[] = 'Slug is required.';
-    } elseif (!preg_match('/^[a-z0-9\-]+$/', $slug)) {
+    if ($title === '') $errors[] = 'Title is required.';
+    if ($slug === '') $errors[] = 'Slug is required.';
+    elseif (!preg_match('/^[a-z0-9\-]+$/', $slug))
         $errors[] = 'Slug can only contain lowercase letters, numbers, and hyphens.';
-    }
-    if (!is_numeric($price) || $price < 0) {
+    if (!is_numeric($price) || $price < 0)
         $errors[] = 'Price must be a non-negative number.';
-    }
 
-    // --- IMAGE UPLOAD (Optional) ---
     $uploaded = null;
     if (!empty($_FILES['image']['name'])) {
         $uploaded = uploadImage($_FILES['image']);
         if ($uploaded === false) {
             $errorMsg = 'Invalid image upload. Allowed: jpg, png, gif, webp. Max size 2MB.';
             $errors[] = $errorMsg;
-
-            // Log + Email error
-            logCatalogAction("Image upload failed while editing item '{$title}' (ID: {$id}). Reason: {$errorMsg}");
-            sendMailpitNotification(
-                'Catalog Item Edit - Image Upload Failed',
-                "Item ID: $id\nTitle: $title\nSlug: $slug\nError: $errorMsg\nTime: " . date('Y-m-d H:i:s')
-            );
+            logCatalogAction("Image upload failed for '{$title}' ID {$id}");
+            sendMailpitNotification("Catalog Edit - Image Upload Failed", "Item ID: $id\nError: $errorMsg");
         }
     }
 
-    // --- PROCESS UPDATE ---
     if (empty($errors)) {
         try {
             if ($uploaded !== null) {
                 $sql = "UPDATE catalog_items 
-                        SET slug=?, title=?, price=?, short_desc=?, image_path=?, status=?, updated_at=NOW()
+                        SET slug=?, title=?, price=?, short_desc=?, image_path=?, status=?, updated_at=NOW() 
                         WHERE id=?";
                 $params = [$slug, $title, $price, $short_desc, $uploaded, $status, $id];
             } else {
                 $sql = "UPDATE catalog_items 
-                        SET slug=?, title=?, price=?, short_desc=?, status=?, updated_at=NOW()
+                        SET slug=?, title=?, price=?, short_desc=?, status=?, updated_at=NOW() 
                         WHERE id=?";
                 $params = [$slug, $title, $price, $short_desc, $status, $id];
             }
@@ -104,163 +98,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
 
-            // ✅ Log + Send Mailpit Notification
-            logCatalogAction("Catalog item updated: ID={$id}, Title='{$title}', Slug='{$slug}', Price={$price}, Status='{$status}'");
-
-            sendMailpitNotification(
-                'Catalog Item Updated Successfully',
-                "The following catalog item was updated:\n\nID: $id\nTitle: $title\nSlug: $slug\nPrice: $price\nStatus: $status\nTime: " . date('Y-m-d H:i:s')
-            );
+            logCatalogAction("Item Updated: ID=$id Title='$title'");
+            sendMailpitNotification("Catalog Item Updated", "ID: $id\nTitle: $title");
 
             header('Location: catalog.php');
             exit;
+
         } catch (PDOException $e) {
             if ($e->getCode() == 23000) {
-                $errorMsg = 'Slug already exists. Choose a different one.';
-                $errors[] = $errorMsg;
-                logCatalogAction("Edit failed for item ID={$id} ('{$title}') - duplicate slug '{$slug}'.");
-
-                sendMailpitNotification(
-                    'Catalog Item Edit Failed - Duplicate Slug',
-                    "Edit failed for item ID: $id\nTitle: $title\nSlug: $slug\nReason: Duplicate slug\nTime: " . date('Y-m-d H:i:s')
-                );
+                $errors[] = "Slug already exists.";
             } else {
-                $errorMsg = 'Database error: ' . $e->getMessage();
-                $errors[] = $errorMsg;
-                log_error("Database error during catalog-edit: " . $e->getMessage());
-                logCatalogAction("Database error while editing item ID={$id} ('{$title}'): " . $e->getMessage());
-
-                sendMailpitNotification(
-                    'Catalog Item Edit Failed - Database Error',
-                    "Database error while editing item ID: $id\nTitle: $title\nSlug: $slug\nError: {$e->getMessage()}\nTime: " . date('Y-m-d H:i:s')
-                );
+                $errors[] = "Database error: " . $e->getMessage();
             }
         }
-    } else {
-        // ✅ Log + Email validation errors
-        logCatalogAction("Catalog item edit failed for ID={$id} ('{$title}') due to validation errors: " . implode('; ', $errors));
-        sendMailpitNotification(
-            'Catalog Item Edit Failed - Validation Errors',
-            "Validation errors occurred while editing item:\nID: $id\nTitle: $title\nSlug: $slug\nErrors: " . implode('; ', $errors) . "\nTime: " . date('Y-m-d H:i:s')
-        );
     }
 }
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Edit Catalog Item</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 0;
-            color: #333;
-        }
+<meta charset="UTF-8">
+<title>Edit Catalog Item</title>
 
-        h1 {
-            text-align: center;
-            color: #0056b3;
-            margin: 20px 0;
-        }
+<style>
+body { font-family: Arial; margin: 0; background: #f2f2f2; }
+.navbar a { color: white; margin-left: 20px; text-decoration: none; padding-bottom: 5px; }
+.navbar a.active {
+    color: #007bff;        /* blue text */
+    text-decoration: underline;
+    font-weight: bold;
+}
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
+.container { background: white; width: 600px; margin: 30px auto; padding: 25px; border-radius: 8px; }
+input, textarea, select { width: 100%; padding: 8px; margin: 8px 0; }
+button { padding: 10px 20px; background: #027cf7ff; color: white; border: none; cursor: pointer; }
+.error-list { background: #ffcccc; padding: 10px; border-left: 4px solid red; }
+</style>
 
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        textarea,
-        select,
-        input[type="file"] {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
-        textarea {
-            resize: vertical;
-        }
-
-        button {
-            padding: 12px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        .error-list {
-            color: red;
-            background-color: #f8d7da;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-
-        .error-list li {
-            margin: 5px 0;
-        }
-
-        .back-link {
-            display: block;
-            text-align: center;
-            margin-top: 20px;
-            color: #007bff;
-            font-size: 16px;
-            text-decoration: none;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        .current-image {
-            max-width: 200px;
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-
-            h1 {
-                font-size: 24px;
-            }
-        }
-    </style>
 </head>
 <body>
+
+<!-- ROLE-BASED NAVBAR -->
+<div class="navbar" style="background:#2c3e50;padding:15px 30px;display:flex;justify-content:space-between;align-items:center;color:white;">
+    <div><strong>Chandusoft Admin</strong></div>
+
+    <div>
+        <span>Welcome <?= htmlspecialchars(ucfirst($role)) ?>!</span>
+
+        <a href="/dashboard.php" class="<?= basename($_SERVER['PHP_SELF'])==='dashboard.php'?'active':'' ?>">Dashboard</a>
+
+        <?php if ($role === 'admin'): ?>
+            <a href="/admin/catalog.php"
+               class="<?= strpos($_SERVER['REQUEST_URI'],'catalog')!==false ? 'active' : '' ?>">
+               Admin Catalog
+            </a>
+            <a href="/public/catalog.php"
+               class="<?= strpos($_SERVER['REQUEST_URI'],'/public/')!==false ? 'active' : '' ?>">
+               Public Catalog
+            </a>
+            <a href="/admin/orders.php"
+               class="<?= basename($_SERVER['PHP_SELF'])==='orders.php'?'active':'' ?>">
+               Orders
+            </a>
+        <?php elseif ($role === 'editor'): ?>
+            <a href="/public/catalog.php"
+               class="<?= strpos($_SERVER['REQUEST_URI'],'/public/')!==false ? 'active' : '' ?>">
+               Public Catalog
+            </a>
+        <?php endif; ?>
+
+        <a href="/admin-leads.php" class="<?= basename($_SERVER['PHP_SELF'])==='admin-leads.php'?'active':'' ?>">Leads</a>
+        <a href="/pages.php" class="<?= basename($_SERVER['PHP_SELF'])==='pages.php'?'active':'' ?>">Pages</a>
+        <a href="/logout.php" class="<?= basename($_SERVER['PHP_SELF'])==='logout.php'?'active':'' ?>">Logout</a>
+    </div>
+</div>
+<!-- END NAV -->
 
 <div class="container">
     <h1>Edit Catalog Item</h1>
@@ -276,52 +188,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <form method="post" enctype="multipart/form-data" action="catalog-edit.php?id=<?= $id ?>">
-        <div class="form-group">
-            <label for="title">Title:</label>
-            <input type="text" id="title" name="title" value="<?= htmlspecialchars($title) ?>" required>
-        </div>
 
-        <div class="form-group">
-            <label for="slug">Slug:</label>
-            <input type="text" id="slug" name="slug" value="<?= htmlspecialchars($slug) ?>" required placeholder="lowercase letters, numbers, hyphens only">
-        </div>
+        <label>Title</label>
+        <input type="text" name="title" value="<?= htmlspecialchars($title) ?>">
 
-        <div class="form-group">
-            <label for="price">Price ($):</label>
-            <input type="number" id="price" name="price" value="<?= htmlspecialchars($price) ?>" step="0.01" min="0" required>
-        </div>
+        <label>Slug</label>
+        <input type="text" name="slug" value="<?= htmlspecialchars($slug) ?>">
 
-        <div class="form-group">
-            <label for="short_desc">Short Description:</label>
-            <textarea id="short_desc" name="short_desc" rows="4"><?= htmlspecialchars($short_desc) ?></textarea>
-        </div>
+        <label>Price</label>
+        <input type="number" name="price" value="<?= htmlspecialchars($price) ?>" step="0.01">
 
-        <div class="form-group">
-            <label for="status">Status:</label>
-            <select id="status" name="status">
-                <option value="published" <?= $status === 'published' ? 'selected' : '' ?>>Published</option>
-                <option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archived</option>
-            </select>
-        </div>
+        <label>Short Description</label>
+        <textarea name="short_desc"><?= htmlspecialchars($short_desc) ?></textarea>
 
-        <div class="form-group">
-            <label for="current-image">Current Image:</label>
-            <?php if ($currentImage): ?>
-                <img src="../public/<?= htmlspecialchars($currentImage) ?>" alt="Current Image" class="current-image">
-            <?php else: ?>
-                No image uploaded.
-            <?php endif; ?>
-        </div>
+        <label>Status</label>
+        <select name="status">
+            <option value="published" <?= $status==='published'?'selected':'' ?>>Published</option>
+            <option value="draft" <?= $status==='draft'?'selected':'' ?>>Draft</option>
+        </select>
 
-        <div class="form-group">
-            <label for="image">Replace Image (optional):</label>
-            <input type="file" id="image" name="image" accept="image/*">
-        </div>
+        <label>Current Image:</label><br>
+        <?php if ($currentImage): ?>
+            <img class="thumb" src="../public/<?= htmlspecialchars($item['image_path']) ?>" alt="<?= htmlspecialchars($item['title']) ?>">
+                                <?php else: ?>
+        <?php endif; ?>
 
-        <button type="submit">Save Changes</button>
+        <label>Upload New Image</label>
+        <input type="file" name="image">
+
+        <br><br>
+        <button type="submit">Update Item</button>
     </form>
-
-    <p><a href="catalog.php" class="back-link">Back to catalog list</a></p>
 </div>
 
 </body>
